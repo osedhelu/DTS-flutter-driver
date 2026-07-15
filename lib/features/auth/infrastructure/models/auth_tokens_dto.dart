@@ -20,10 +20,11 @@ class AuthTokensDto {
   AuthSession toSession() {
     final payload = decodeJwtPayload(access);
     final userId = payload['user_id'];
+    final role = payload['role'] as String? ?? '';
     return AuthSession(
       accessToken: access,
       refreshToken: refresh,
-      role: payload['role'] as String? ?? '',
+      role: role,
       userId: userId is int ? userId : int.parse('$userId'),
     );
   }

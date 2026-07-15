@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>1015036938407-o1lurko8t3vchrta3qa6kbkg9i85usuf.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyAy9TvSRYhYg83Gx9aBaafGNZaTzGTe1Z4</string>
+	<key>BUNDLE_ID</key>
+	<string>com.osedhelu.dtsdriver</string>
+	<key>CLIENT_ID</key>
+	<string>1015036938407-8fvoe01ns93vce534lgseo9knquiqq68.apps.googleusercontent.com</string>
+	<key>GCM_SENDER_ID</key>
+	<string>1015036938407</string>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:1015036938407:ios:659a99afcda1b3cf08b382</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>PROJECT_ID</key>
+	<string>dtsdrop-85330</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.1015036938407-8fvoe01ns93vce534lgseo9knquiqq68</string>
+	<key>STORAGE_BUCKET</key>
+	<string>dtsdrop-85330.firebasestorage.app</string>
+</dict>
+</plist>

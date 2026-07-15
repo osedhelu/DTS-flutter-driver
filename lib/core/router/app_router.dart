@@ -3,14 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/availability/presentation/screens/availability_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/navigation/presentation/screens/active_delivery_screen.dart';
 import '../../features/orders/presentation/screens/driver_order_detail_screen.dart';
-import '../../features/orders/presentation/screens/driver_orders_screen.dart';
+import '../../features/orders/presentation/screens/order_chat_screen.dart';
+import '../../features/profile/presentation/screens/onboarding_screen.dart';
+import '../../features/shell/presentation/screens/driver_shell_screen.dart';
 import '../di/providers.dart';
 
 class AuthRouterListenable extends ChangeNotifier {
   AuthRouterListenable(this._ref) {
     _ref.listen<AsyncValue<bool>>(authStateProvider, (_, __) {
+      notifyListeners();
+    });
+    _ref.listen<AsyncValue<bool>>(onboardingGateProvider, (_, __) {
       notifyListeners();
     });
   }
@@ -32,15 +38,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authStateProvider);
-      final isLogin = state.matchedLocation == '/login';
+      final onboard = ref.read(onboardingGateProvider);
+      final loc = state.matchedLocation;
+      final isPublic = loc == '/login' || loc == '/register';
+      final isOnboarding = loc == '/onboarding';
 
       return auth.when(
         data: (isAuthenticated) {
-          if (!isAuthenticated && !isLogin) return '/login';
-          if (isAuthenticated && isLogin) return '/availability';
-          return null;
+          if (!isAuthenticated && !isPublic) return '/login';
+          if (!isAuthenticated) return null;
+
+          return onboard.when(
+            data: (completed) {
+              if (!completed && !isOnboarding) return '/onboarding';
+              if (completed && (isPublic || isOnboarding)) return '/home';
+              return null;
+            },
+            loading: () => null,
+            error: (_, __) => isOnboarding ? null : '/onboarding',
+          );
         },
-        loading: () => isLogin ? null : null,
+        loading: () => null,
         error: (_, __) => '/login',
       );
     },
@@ -50,19 +68,72 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
-        path: '/availability',
-        builder: (context, state) => const AvailabilityScreen(),
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
-        path: '/orders',
-        builder: (context, state) => const DriverOrdersScreen(),
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return DriverShellScreen(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const DriverHomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/orders',
+                builder: (context, state) => const ShellOrdersScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) {
+                      final id = int.parse(state.pathParameters['id']!);
+                      return DriverOrderDetailScreen(orderId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'chat',
+                        builder: (context, state) {
+                          final id = int.parse(state.pathParameters['id']!);
+                          return OrderChatScreen(orderId: id);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ShellProfileScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
-        path: '/orders/:id',
+        path: '/active/:id',
         builder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return DriverOrderDetailScreen(orderId: id);
+          return ActiveDeliveryScreen(orderId: id);
         },
+      ),
+      GoRoute(
+        path: '/availability',
+        redirect: (_, __) => '/home',
       ),
     ],
   );

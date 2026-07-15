@@ -26,18 +26,20 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
 
   Future<void> _loadInitialPosition() async {
     final geolocator = ref.read(geolocatorServiceProvider);
-    final granted = await geolocator.isPermissionGranted() ||
-        await geolocator.requestPermission();
-    if (!granted || !mounted) return;
 
     try {
+      final alreadyGranted = await geolocator.isPermissionGranted();
+      final granted =
+          alreadyGranted || await geolocator.requestPermission();
+      if (!granted || !mounted) return;
+
       final position = await geolocator.getCurrentPosition();
       if (!mounted) return;
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
       });
-    } catch (_) {
+    } catch (e) {
       // GPS opcional al cargar; el switch pedirá permiso al activarse.
     }
   }

@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1015036938407",
+    "project_id": "dtsdrop-85330",
+    "storage_bucket": "dtsdrop-85330.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015036938407:android:041cc4084dd2a93008b382",
+        "android_client_info": {
+          "package_name": "com.osedhelu.dtsdriver"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1015036938407-o1lurko8t3vchrta3qa6kbkg9i85usuf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.osedhelu.dtsdriver",
+            "certificate_hash": "69f247b9d146aa5268ac8c6e863bcf14a853ffa4"
+          }
+        },
+        {
+          "client_id": "1015036938407-3b42tv87mauud225f3vfett7c5rtogof.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBj-DmYwHfG6kvSKoCF-kqC4tvt3v9pQBI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1015036938407-3b42tv87mauud225f3vfett7c5rtogof.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1015036938407-5sv7g0c6ujt98g2imkq3u6qlddolij9s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.osedhelu.dts"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

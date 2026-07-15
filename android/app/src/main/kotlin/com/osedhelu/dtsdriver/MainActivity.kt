@@ -1,4 +1,4 @@
-package com.dts.dts_driver
+package com.osedhelu.dtsdriver
 
 import io.flutter.embedding.android.FlutterActivity
 

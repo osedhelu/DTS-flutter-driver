@@ -5,8 +5,12 @@ import '../network/token_storage.dart';
 import '../location/geolocator_service.dart';
 import '../location/geolocator_service_impl.dart';
 import '../firebase/firebase_messaging_service.dart';
+import '../firebase/fcm_firebase_messaging_service.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
+import '../../features/auth/domain/usecases/apple_sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/driver_login_usecase.dart';
+import '../../features/auth/domain/usecases/google_sign_in_usecase.dart';
+import '../../features/auth/domain/usecases/register_driver_usecase.dart';
 import '../../features/auth/infrastructure/datasources/auth_remote_datasource.dart';
 import '../../features/auth/infrastructure/repositories/auth_repository_impl.dart';
 import '../../features/availability/domain/repositories/availability_repository.dart';
@@ -20,9 +24,21 @@ import '../../features/orders/domain/usecases/confirm_pickup_usecase.dart';
 import '../../features/orders/infrastructure/datasources/driver_order_remote_datasource.dart';
 import '../../features/orders/infrastructure/repositories/driver_order_repository_impl.dart';
 import '../../features/location/domain/usecases/send_location_usecase.dart';
+import '../../features/location/infrastructure/datasources/driver_tracking_ws_datasource.dart';
 import '../../features/location/infrastructure/datasources/location_tracking_remote_datasource.dart';
 import '../../features/location/infrastructure/repositories/location_tracking_repository_impl.dart';
 import '../../features/location/application/services/location_service.dart';
+import '../../features/profile/domain/repositories/driver_profile_repository.dart';
+import '../../features/profile/domain/usecases/get_driver_profile_usecase.dart';
+import '../../features/profile/domain/usecases/update_driver_profile_usecase.dart';
+import '../../features/profile/infrastructure/datasources/driver_profile_remote_datasource.dart';
+import '../../features/profile/infrastructure/repositories/driver_profile_repository_impl.dart';
+import '../../features/offers/domain/repositories/driver_offer_repository.dart';
+import '../../features/offers/domain/usecases/accept_driver_offer_usecase.dart';
+import '../../features/offers/domain/usecases/list_driver_offers_usecase.dart';
+import '../../features/offers/domain/usecases/reject_driver_offer_usecase.dart';
+import '../../features/offers/infrastructure/datasources/driver_offer_remote_datasource.dart';
+import '../../features/offers/infrastructure/repositories/driver_offer_repository_impl.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
   return SecureTokenStorage();
@@ -38,7 +54,9 @@ final geolocatorServiceProvider = Provider<GeolocatorService>((ref) {
 });
 
 final firebaseMessagingServiceProvider = Provider<FirebaseMessagingService>((ref) {
-  return MockFirebaseMessagingService();
+  final service = FcmFirebaseMessagingService();
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
@@ -54,6 +72,18 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 final driverLoginUseCaseProvider = Provider<DriverLoginUseCase>((ref) {
   return DriverLoginUseCase(ref.watch(authRepositoryProvider));
+});
+
+final registerDriverUseCaseProvider = Provider<RegisterDriverUseCase>((ref) {
+  return RegisterDriverUseCase(ref.watch(authRepositoryProvider));
+});
+
+final googleSignInUseCaseProvider = Provider<GoogleSignInUseCase>((ref) {
+  return GoogleSignInUseCase(ref.watch(authRepositoryProvider));
+});
+
+final appleSignInUseCaseProvider = Provider<AppleSignInUseCase>((ref) {
+  return AppleSignInUseCase(ref.watch(authRepositoryProvider));
 });
 
 final authStateProvider = FutureProvider<bool>((ref) async {
@@ -87,7 +117,7 @@ final driverOrderRepositoryProvider = Provider<DriverOrderRepository>((ref) {
 });
 
 final acceptOrderUseCaseProvider = Provider<AcceptOrderUseCase>((ref) {
-  return AcceptOrderUseCase(ref.watch(driverOrderRepositoryProvider));
+  return AcceptOrderUseCase(ref.watch(driverOfferRepositoryProvider));
 });
 
 final confirmPickupUseCaseProvider = Provider<ConfirmPickupUseCase>((ref) {
@@ -103,10 +133,21 @@ final locationTrackingRemoteDataSourceProvider =
   return LocationTrackingRemoteDataSource(ref.watch(apiClientProvider).dio);
 });
 
+final driverTrackingWsDataSourceProvider =
+    Provider<DriverTrackingWsDataSource>((ref) {
+  final datasource = DriverTrackingWsDataSource();
+  ref.onDispose(() {
+    datasource.disconnect();
+  });
+  return datasource;
+});
+
 final locationTrackingRepositoryProvider =
     Provider<LocationTrackingRepository>((ref) {
   return LocationTrackingRepositoryImpl(
-    ref.watch(locationTrackingRemoteDataSourceProvider),
+    remoteDataSource: ref.watch(locationTrackingRemoteDataSourceProvider),
+    wsDataSource: ref.watch(driverTrackingWsDataSourceProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
   );
 });
 
@@ -123,4 +164,60 @@ final locationServiceProvider = Provider<LocationService>((ref) {
     sendLocationUseCase: ref.watch(sendLocationUseCaseProvider),
     geolocatorService: ref.watch(geolocatorServiceProvider),
   );
+});
+
+final driverProfileRemoteDataSourceProvider =
+    Provider<DriverProfileRemoteDataSource>((ref) {
+  return DriverProfileRemoteDataSource(ref.watch(apiClientProvider).dio);
+});
+
+final driverProfileRepositoryProvider = Provider<DriverProfileRepository>((ref) {
+  return DriverProfileRepositoryImpl(
+    ref.watch(driverProfileRemoteDataSourceProvider),
+  );
+});
+
+final getDriverProfileUseCaseProvider = Provider<GetDriverProfileUseCase>((ref) {
+  return GetDriverProfileUseCase(ref.watch(driverProfileRepositoryProvider));
+});
+
+final updateDriverProfileUseCaseProvider =
+    Provider<UpdateDriverProfileUseCase>((ref) {
+  return UpdateDriverProfileUseCase(ref.watch(driverProfileRepositoryProvider));
+});
+
+final onboardingGateProvider = FutureProvider<bool>((ref) async {
+  final authed = await ref.watch(authStateProvider.future);
+  if (!authed) return true;
+  try {
+    final profile = await ref.watch(getDriverProfileUseCaseProvider).call();
+    return profile.onboardingCompleted;
+  } catch (_) {
+    return false;
+  }
+});
+
+final driverOfferRemoteDataSourceProvider =
+    Provider<DriverOfferRemoteDataSource>((ref) {
+  return DriverOfferRemoteDataSource(ref.watch(apiClientProvider).dio);
+});
+
+final driverOfferRepositoryProvider = Provider<DriverOfferRepository>((ref) {
+  return DriverOfferRepositoryImpl(
+    ref.watch(driverOfferRemoteDataSourceProvider),
+  );
+});
+
+final listDriverOffersUseCaseProvider = Provider<ListDriverOffersUseCase>((ref) {
+  return ListDriverOffersUseCase(ref.watch(driverOfferRepositoryProvider));
+});
+
+final acceptDriverOfferUseCaseProvider =
+    Provider<AcceptDriverOfferUseCase>((ref) {
+  return AcceptDriverOfferUseCase(ref.watch(driverOfferRepositoryProvider));
+});
+
+final rejectDriverOfferUseCaseProvider =
+    Provider<RejectDriverOfferUseCase>((ref) {
+  return RejectDriverOfferUseCase(ref.watch(driverOfferRepositoryProvider));
 });

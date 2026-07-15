@@ -1,0 +1,11 @@
+{
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "DTS Driver",
+        "supportEmail": "osedhelu@gmail.com"
+      }
+    }
+  }
+}
