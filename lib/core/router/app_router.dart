@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/history/presentation/screens/history_screen.dart';
 import '../../features/navigation/presentation/screens/active_delivery_screen.dart';
 import '../../features/orders/presentation/screens/driver_order_detail_screen.dart';
 import '../../features/orders/presentation/screens/order_chat_screen.dart';
+import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/profile/presentation/screens/onboarding_screen.dart';
+import '../../features/settings/presentation/screens/help_screen.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/shell/presentation/screens/driver_shell_screen.dart';
 import '../di/providers.dart';
 
@@ -40,7 +45,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authStateProvider);
       final onboard = ref.read(onboardingGateProvider);
       final loc = state.matchedLocation;
-      final isPublic = loc == '/login' || loc == '/register';
+      final isPublic = loc == '/login' ||
+          loc == '/register' ||
+          loc == '/forgot-password';
       final isOnboarding = loc == '/onboarding';
 
       return auth.when(
@@ -70,6 +77,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/onboarding',
@@ -117,8 +128,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/earnings',
+                builder: (context, state) => const ShellEarningsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/profile',
                 builder: (context, state) => const ShellProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -130,6 +155,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final id = int.parse(state.pathParameters['id']!);
           return ActiveDeliveryScreen(orderId: id);
         },
+      ),
+      GoRoute(
+        path: '/history',
+        builder: (context, state) => const HistoryScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/help',
+        builder: (context, state) => const HelpScreen(),
       ),
       GoRoute(
         path: '/availability',

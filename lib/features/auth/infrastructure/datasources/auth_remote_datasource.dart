@@ -86,4 +86,21 @@ class AuthRemoteDataSource {
       },
     );
   }
+
+  Future<void> requestPasswordReset(String email) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/accounts/password-reset/request/',
+      data: {'email': email},
+    );
+  }
+
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String password,
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/accounts/password-reset/confirm/',
+      data: {'token': token, 'password': password},
+    );
+  }
 }

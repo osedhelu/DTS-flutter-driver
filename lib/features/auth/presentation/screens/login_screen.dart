@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/widgets.dart';
 import '../../application/post_auth_service.dart';
 import '../../domain/exceptions/not_a_driver_exception.dart';
 
@@ -21,6 +23,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscure = true;
   String? _error;
 
   @override
@@ -50,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'No se pudo iniciar sesión: $e';
+          _error = 'No se pudo iniciar sesión';
           _isLoading = false;
         });
       }
@@ -80,76 +83,162 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await _afterAuth(() => ref.read(appleSignInUseCaseProvider).call());
   }
 
-  bool get _showApple =>
-      !kIsWeb && (Platform.isIOS || Platform.isMacOS);
+  bool get _showApple => !kIsWeb && (Platform.isIOS || Platform.isMacOS);
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Conductor — Iniciar sesión')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                key: const Key('login_username'),
-                controller: _usernameController,
-                decoration: const InputDecoration(labelText: 'Usuario'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                key: const Key('login_password'),
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Requerido' : null,
-              ),
-              if (_error != null) ...[
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0B3D2E), Color(0xFF145A43), Color(0xFFF7F8F6)],
+            stops: [0.0, 0.35, 0.35],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(
+                      Icons.delivery_dining,
+                      size: 40,
+                      color: Color(0xFF0B3D2E),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  'DTS Conductor',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Gana entregando pedidos cerca de ti',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+                const SizedBox(height: 36),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Iniciar sesión',
+                            style: theme.textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            key: const Key('login_username'),
+                            controller: _usernameController,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Usuario',
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
+                            validator: (value) =>
+                                value == null || value.isEmpty
+                                    ? 'Requerido'
+                                    : null,
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            key: const Key('login_password'),
+                            controller: _passwordController,
+                            obscureText: _obscure,
+                            decoration: InputDecoration(
+                              labelText: 'Contraseña',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
+                              ),
+                            ),
+                            validator: (value) =>
+                                value == null || value.isEmpty
+                                    ? 'Requerido'
+                                    : null,
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => context.push('/forgot-password'),
+                              child: const Text('¿Olvidaste tu contraseña?'),
+                            ),
+                          ),
+                          if (_error != null) ...[
+                            Text(
+                              _error!,
+                              style: TextStyle(color: theme.colorScheme.error),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          DtsPrimaryButton(
+                            key: const Key('login_submit'),
+                            label: 'Entrar',
+                            isLoading: _isLoading,
+                            onPressed: _submit,
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            key: const Key('login_google'),
+                            onPressed: _isLoading ? null : _signInWithGoogle,
+                            icon: const Icon(Icons.g_mobiledata, size: 28),
+                            label: const Text('Continuar con Google'),
+                          ),
+                          if (_showApple) ...[
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              key: const Key('login_apple'),
+                              onPressed: _isLoading ? null : _signInWithApple,
+                              icon: const Icon(Icons.apple),
+                              label: const Text('Continuar con Apple'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: _isLoading ? null : () => context.go('/register'),
+                  child: const Text('¿Nuevo conductor? Crear cuenta'),
                 ),
               ],
-              const SizedBox(height: 24),
-              FilledButton(
-                key: const Key('login_submit'),
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Entrar'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                key: const Key('login_google'),
-                onPressed: _isLoading ? null : _signInWithGoogle,
-                icon: const Icon(Icons.g_mobiledata),
-                label: const Text('Continuar con Google'),
-              ),
-              if (_showApple) ...[
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  key: const Key('login_apple'),
-                  onPressed: _isLoading ? null : _signInWithApple,
-                  icon: const Icon(Icons.apple),
-                  label: const Text('Continuar con Apple'),
-                ),
-              ],
-              TextButton(
-                onPressed: _isLoading ? null : () => context.go('/register'),
-                child: const Text('Crear cuenta'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

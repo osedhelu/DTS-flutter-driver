@@ -18,7 +18,21 @@ void main() {
     expect(capturedOrderId, 99);
   });
 
-  test('ignores non READY_FOR_PICKUP messages', () {
+  test('handles lowercase ready_for_pickup', () {
+    final handler = NewOrderNotificationHandler();
+    int? capturedOrderId;
+
+    handler.handleMessage(
+      const RemotePushMessage(
+        data: {'type': 'ready_for_pickup', 'order_id': '7'},
+      ),
+      (orderId) => capturedOrderId = orderId,
+    );
+
+    expect(capturedOrderId, 7);
+  });
+
+  test('ignores non offer messages', () {
     final handler = NewOrderNotificationHandler();
     var called = false;
 

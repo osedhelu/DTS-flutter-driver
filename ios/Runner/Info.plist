@@ -74,5 +74,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Necesitamos acceso a tus fotos para actualizar tu foto de perfil de conductor.</string>
 </dict>
 </plist>

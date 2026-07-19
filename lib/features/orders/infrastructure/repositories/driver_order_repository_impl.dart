@@ -8,9 +8,15 @@ class DriverOrderRepositoryImpl implements DriverOrderRepository {
   final DriverOrderRemoteDataSource _remoteDataSource;
 
   @override
-  Future<List<DriverOrder>> listOrders() async {
-    final dtos = await _remoteDataSource.listOrders();
+  Future<List<DriverOrder>> listOrders({String? status}) async {
+    final dtos = await _remoteDataSource.listOrders(status: status);
     return dtos.map((dto) => dto.toEntity()).toList();
+  }
+
+  @override
+  Future<DriverOrder> getOrder(int orderId) async {
+    final dto = await _remoteDataSource.getOrder(orderId);
+    return dto.toEntity();
   }
 
   @override

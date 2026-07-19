@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/widgets/widgets.dart';
 import '../../domain/entities/driver_order.dart';
 
 class DriverOrdersScreen extends ConsumerStatefulWidget {
@@ -52,30 +53,75 @@ class _DriverOrdersScreenState extends ConsumerState<DriverOrdersScreen> {
         title: const Text('Mis pedidos'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => context.push('/history'),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadOrders,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const DtsLoading()
           : _error != null
-              ? Center(child: Text(_error!))
-              : _orders.isEmpty
-                  ? const Center(child: Text('Sin pedidos asignados'))
-                  : ListView.builder(
-                      itemCount: _orders.length,
-                      itemBuilder: (context, index) {
-                        final order = _orders[index];
-                        return ListTile(
-                          key: Key('order_tile_${order.id}'),
-                          title: Text('Pedido #${order.id}'),
-                          subtitle: Text('${order.status} · \$${order.total}'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.go('/orders/${order.id}'),
-                        );
-                      },
-                    ),
+              ? DtsErrorView(message: _error!, onRetry: _loadOrders)
+              : RefreshIndicator(
+                  onRefresh: _loadOrders,
+                  child: _orders.isEmpty
+                      ? ListView(
+                          children: const [
+                            SizedBox(height: 100),
+                            DtsEmptyState(
+                              icon: Icons.list_alt,
+                              title: 'Sin pedidos',
+                              message:
+                                  'Cuando aceptes una oferta, aparecerá aquí.',
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _orders.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final order = _orders[index];
+                            return Card(
+                              key: Key('order_tile_${order.id}'),
+                              child: ListTile(
+                                title: Text(
+                                  order.storeName.isNotEmpty
+                                      ? order.storeName
+                                      : 'Pedido #${order.id}',
+                                ),
+                                subtitle: Text(
+                                  '${order.status} · \$${order.total} · ${order.itemCount} ítems',
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    DtsStatusChip(
+                                      label: order.status,
+                                      tone: DtsStatusChip.toneForStatus(
+                                        order.status,
+                                      ),
+                                    ),
+                                    const Icon(Icons.chevron_right),
+                                  ],
+                                ),
+                                onTap: () {
+                                  if (order.isActive) {
+                                    context.push('/active/${order.id}');
+                                  } else {
+                                    context.go('/orders/${order.id}');
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
     );
   }
 }

@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
 
-/// Tema Material 3 para la app conductor: verde tinta profundo con acento
-/// ámbar, pensado para uso en exteriores y con luz solar directa.
-///
-/// Tipografía del sistema (sin descarga en red) para evitar fallos offline.
+/// Tema Material 3 — verde tinta + ámbar, tipografía Manrope local.
 abstract final class AppTheme {
-  static const Color _seed = Color(0xFF0B3D2E);
-  static const Color _accent = Color(0xFFF5A623);
-  static const Color _surface = Color(0xFFF7F8F6);
+  static const Color seed = Color(0xFF0B3D2E);
+  static const Color accent = Color(0xFFF5A623);
+  static const Color surface = Color(0xFFF7F8F6);
+  static const String fontFamily = 'Manrope';
 
   static ThemeData get light {
     final baseScheme = ColorScheme.fromSeed(
-      seedColor: _seed,
+      seedColor: seed,
       brightness: Brightness.light,
     );
 
     final colorScheme = baseScheme.copyWith(
-      secondary: _accent,
+      secondary: accent,
       onSecondary: Colors.black,
-      secondaryContainer: _accent.withValues(alpha: 0.18),
+      secondaryContainer: accent.withValues(alpha: 0.18),
       onSecondaryContainer: const Color(0xFF3D2900),
-      tertiary: _accent,
-      surface: _surface,
+      tertiary: accent,
+      surface: surface,
     );
 
-    final baseText = ThemeData(brightness: Brightness.light).textTheme;
+    final baseText = ThemeData(brightness: Brightness.light).textTheme.apply(
+          fontFamily: fontFamily,
+        );
     final textTheme = baseText.copyWith(
       displayLarge: baseText.displayLarge?.copyWith(
         fontWeight: FontWeight.w700,
@@ -50,8 +50,9 @@ abstract final class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontFamily,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: _surface,
+      scaffoldBackgroundColor: surface,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface,
@@ -81,7 +82,10 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -91,13 +95,19 @@ abstract final class AppTheme {
             borderRadius: BorderRadius.circular(14),
           ),
           side: BorderSide(color: colorScheme.outline),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -125,6 +135,7 @@ abstract final class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.secondaryContainer,
         labelStyle: TextStyle(
+          fontFamily: fontFamily,
           color: colorScheme.onSecondaryContainer,
           fontWeight: FontWeight.w600,
         ),
@@ -140,6 +151,7 @@ abstract final class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
+            fontFamily: fontFamily,
             fontSize: 12,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
@@ -161,12 +173,32 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
+        contentTextStyle: TextStyle(
+          fontFamily: fontFamily,
+          color: colorScheme.onInverseSurface,
+        ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
+    );
+  }
+
+  static ThemeData get dark {
+    final baseScheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.dark,
+    );
+    final colorScheme = baseScheme.copyWith(secondary: accent);
+    return ThemeData(
+      useMaterial3: true,
+      fontFamily: fontFamily,
+      colorScheme: colorScheme,
+      brightness: Brightness.dark,
+      textTheme: ThemeData(brightness: Brightness.dark).textTheme.apply(
+            fontFamily: fontFamily,
+          ),
     );
   }
 }

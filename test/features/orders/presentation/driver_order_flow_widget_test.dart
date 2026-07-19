@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:dts_driver/core/di/providers.dart';
@@ -67,6 +66,7 @@ void main() {
     WidgetTester tester, {
     required DriverOrder order,
   }) async {
+    when(() => repository.getOrder(order.id)).thenAnswer((_) async => order);
     when(() => repository.listOrders()).thenAnswer((_) async => [order]);
 
     await tester.pumpWidget(
@@ -85,8 +85,6 @@ void main() {
   }
 
   testWidgets('driver_order_flow_widget_test accept step', (tester) async {
-    when(() => repository.listOrders()).thenAnswer((_) async => [orderAssigned]);
-
     await pumpDetail(tester, order: orderAssigned);
 
     expect(find.byKey(const Key('accept_order_button')), findsOneWidget);
@@ -97,8 +95,6 @@ void main() {
   });
 
   testWidgets('driver_order_flow_widget_test confirm pickup', (tester) async {
-    when(() => repository.listOrders()).thenAnswer((_) async => [orderPickedUp]);
-
     await pumpDetail(tester, order: orderPickedUp);
 
     expect(find.byKey(const Key('confirm_pickup_button')), findsOneWidget);
@@ -109,8 +105,6 @@ void main() {
   });
 
   testWidgets('driver_order_flow_widget_test confirm delivery', (tester) async {
-    when(() => repository.listOrders()).thenAnswer((_) async => [orderOnTheWay]);
-
     await pumpDetail(tester, order: orderOnTheWay);
 
     expect(find.byKey(const Key('confirm_delivery_button')), findsOneWidget);

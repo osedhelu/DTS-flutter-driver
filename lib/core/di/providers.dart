@@ -6,6 +6,7 @@ import '../location/geolocator_service.dart';
 import '../location/geolocator_service_impl.dart';
 import '../firebase/firebase_messaging_service.dart';
 import '../firebase/fcm_firebase_messaging_service.dart';
+import '../notifications/local_notification_service.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/apple_sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/driver_login_usecase.dart';
@@ -39,6 +40,7 @@ import '../../features/offers/domain/usecases/list_driver_offers_usecase.dart';
 import '../../features/offers/domain/usecases/reject_driver_offer_usecase.dart';
 import '../../features/offers/infrastructure/datasources/driver_offer_remote_datasource.dart';
 import '../../features/offers/infrastructure/repositories/driver_offer_repository_impl.dart';
+import '../../features/earnings/infrastructure/datasources/earnings_remote_datasource.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
   return SecureTokenStorage();
@@ -53,7 +55,13 @@ final geolocatorServiceProvider = Provider<GeolocatorService>((ref) {
   return const GeolocatorServiceImpl();
 });
 
-final firebaseMessagingServiceProvider = Provider<FirebaseMessagingService>((ref) {
+final localNotificationServiceProvider =
+    Provider<LocalNotificationService>((ref) {
+  return LocalNotificationService();
+});
+
+final firebaseMessagingServiceProvider =
+    Provider<FirebaseMessagingService>((ref) {
   final service = FcmFirebaseMessagingService();
   ref.onDispose(service.dispose);
   return service;
@@ -171,13 +179,15 @@ final driverProfileRemoteDataSourceProvider =
   return DriverProfileRemoteDataSource(ref.watch(apiClientProvider).dio);
 });
 
-final driverProfileRepositoryProvider = Provider<DriverProfileRepository>((ref) {
+final driverProfileRepositoryProvider =
+    Provider<DriverProfileRepository>((ref) {
   return DriverProfileRepositoryImpl(
     ref.watch(driverProfileRemoteDataSourceProvider),
   );
 });
 
-final getDriverProfileUseCaseProvider = Provider<GetDriverProfileUseCase>((ref) {
+final getDriverProfileUseCaseProvider =
+    Provider<GetDriverProfileUseCase>((ref) {
   return GetDriverProfileUseCase(ref.watch(driverProfileRepositoryProvider));
 });
 
@@ -208,7 +218,8 @@ final driverOfferRepositoryProvider = Provider<DriverOfferRepository>((ref) {
   );
 });
 
-final listDriverOffersUseCaseProvider = Provider<ListDriverOffersUseCase>((ref) {
+final listDriverOffersUseCaseProvider =
+    Provider<ListDriverOffersUseCase>((ref) {
   return ListDriverOffersUseCase(ref.watch(driverOfferRepositoryProvider));
 });
 
@@ -221,3 +232,10 @@ final rejectDriverOfferUseCaseProvider =
     Provider<RejectDriverOfferUseCase>((ref) {
   return RejectDriverOfferUseCase(ref.watch(driverOfferRepositoryProvider));
 });
+
+final earningsRemoteDataSourceProvider =
+    Provider<EarningsRemoteDataSource>((ref) {
+  return EarningsRemoteDataSource(ref.watch(apiClientProvider).dio);
+});
+
+final connectivityOfflineProvider = StateProvider<bool>((ref) => false);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/widgets/widgets.dart';
 import '../../domain/entities/driver_profile.dart';
 
 const _vehicleTypeLabels = <String, String>{
@@ -55,6 +56,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _logout() async {
     setState(() => _isLoggingOut = true);
     try {
+      ref.read(locationServiceProvider).stop();
       await ref.read(authRepositoryProvider).logout();
       ref.invalidate(authStateProvider);
       ref.invalidate(onboardingGateProvider);
@@ -70,9 +72,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi perfil')),
+      appBar: AppBar(
+        title: const Text('Mi perfil'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const DtsLoading()
           : RefreshIndicator(
               onRefresh: _loadProfile,
               child: ListView(
@@ -104,6 +114,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
+                  Center(
+                    child: DtsStatusChip(
+                      label: profile?.isOnline == true ? 'En línea' : 'Offline',
+                      tone: profile?.isOnline == true
+                          ? DtsChipTone.success
+                          : DtsChipTone.neutral,
+                    ),
+                  ),
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -114,7 +132,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  Card(
+                    child: Column(
+                      children: [
+                        _MenuTile(
+                          icon: Icons.edit_outlined,
+                          title: 'Editar perfil',
+                          onTap: () async {
+                            final ok = await context.push('/profile/edit');
+                            if (ok == true) _loadProfile();
+                          },
+                        ),
+                        const Divider(height: 1),
+                        _MenuTile(
+                          icon: Icons.payments_outlined,
+                          title: 'Ganancias',
+                          onTap: () => context.push('/earnings'),
+                        ),
+                        const Divider(height: 1),
+                        _MenuTile(
+                          icon: Icons.history,
+                          title: 'Historial',
+                          onTap: () => context.push('/history'),
+                        ),
+                        const Divider(height: 1),
+                        _MenuTile(
+                          icon: Icons.settings_outlined,
+                          title: 'Ajustes',
+                          onTap: () => context.push('/settings'),
+                        ),
+                        const Divider(height: 1),
+                        _MenuTile(
+                          icon: Icons.help_outline,
+                          title: 'Ayuda',
+                          onTap: () => context.push('/help'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(4),
@@ -170,6 +227,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _MenuTile extends StatelessWidget {
+  const _MenuTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
     );
   }
 }
