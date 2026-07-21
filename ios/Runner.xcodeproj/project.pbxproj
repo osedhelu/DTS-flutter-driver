@@ -106,7 +106,6 @@
 				3AF35CBC785AF0105064FCAD /* Pods-RunnerTests.release.xcconfig */,
 				4C0B64EAABD80445A4414395 /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -492,12 +491,12 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = 4J4GV5QSWF;
+				DEVELOPMENT_TEAM = N79CAHLKMS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicaci\U00f3n para marcarte como conductor disponible y enviar pedidos cercanos.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos tu ubicaci\U00f3n para el seguimiento de entregas mientras conduces.";
-				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Necesitamos tu ubicaci\U00f3n para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos tu ubicación para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Necesitamos tu ubicación para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para marcarte como conductor disponible y enviar pedidos cercanos.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -679,12 +678,12 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = 4J4GV5QSWF;
+				DEVELOPMENT_TEAM = N79CAHLKMS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicaci\U00f3n para marcarte como conductor disponible y enviar pedidos cercanos.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos tu ubicaci\U00f3n para el seguimiento de entregas mientras conduces.";
-				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Necesitamos tu ubicaci\U00f3n para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos tu ubicación para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Necesitamos tu ubicación para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para marcarte como conductor disponible y enviar pedidos cercanos.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -706,12 +705,12 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = 4J4GV5QSWF;
+				DEVELOPMENT_TEAM = N79CAHLKMS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicaci\U00f3n para marcarte como conductor disponible y enviar pedidos cercanos.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos tu ubicaci\U00f3n para el seguimiento de entregas mientras conduces.";
-				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Necesitamos tu ubicaci\U00f3n para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos tu ubicación para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Necesitamos tu ubicación para el seguimiento de entregas mientras conduces.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para marcarte como conductor disponible y enviar pedidos cercanos.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
