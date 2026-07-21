@@ -12,11 +12,14 @@ class FcmFirebaseMessagingService implements FirebaseMessagingService {
 
   final FirebaseMessaging _messaging;
   final _controller = StreamController<PushMessage>.broadcast();
+  final _openedController = StreamController<PushMessage>.broadcast();
   StreamSubscription<RemoteMessage>? _sub;
   StreamSubscription<RemoteMessage>? _openedSub;
 
   @override
   Stream<PushMessage> get onMessage => _controller.stream;
+
+  Stream<PushMessage> get onMessageOpenedApp => _openedController.stream;
 
   @override
   Future<void> initialize() async {
@@ -26,10 +29,14 @@ class FcmFirebaseMessagingService implements FirebaseMessagingService {
       sound: true,
     );
     _sub = FirebaseMessaging.onMessage.listen((msg) {
-      _controller.add(RemotePushMessage(data: Map<String, dynamic>.from(msg.data)));
+      _controller.add(
+        RemotePushMessage(data: Map<String, dynamic>.from(msg.data)),
+      );
     });
     _openedSub = FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-      _controller.add(RemotePushMessage(data: Map<String, dynamic>.from(msg.data)));
+      _openedController.add(
+        RemotePushMessage(data: Map<String, dynamic>.from(msg.data)),
+      );
     });
     await _logFcmTokenSafely();
   }
@@ -80,5 +87,6 @@ class FcmFirebaseMessagingService implements FirebaseMessagingService {
     _sub?.cancel();
     _openedSub?.cancel();
     _controller.close();
+    _openedController.close();
   }
 }

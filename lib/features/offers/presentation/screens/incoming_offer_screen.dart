@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/notifications/offer_ringtone_service.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../domain/entities/driver_offer.dart';
 
@@ -22,12 +25,20 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
   static const _seconds = 45;
   int _remaining = _seconds;
   bool _busy = false;
+  final _ringtone = OfferRingtoneService();
 
   @override
   void initState() {
     super.initState();
     HapticFeedback.heavyImpact();
+    unawaited(_ringtone.start());
     _tick();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_ringtone.dispose());
+    super.dispose();
   }
 
   void _tick() async {
@@ -43,6 +54,7 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
 
   Future<void> _accept() async {
     setState(() => _busy = true);
+    await _ringtone.stop();
     try {
       await ref
           .read(acceptDriverOfferUseCaseProvider)
@@ -56,11 +68,13 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
         const SnackBar(content: Text('No se pudo aceptar la oferta')),
       );
       setState(() => _busy = false);
+      unawaited(_ringtone.start());
     }
   }
 
   Future<void> _reject({bool auto = false}) async {
     setState(() => _busy = true);
+    await _ringtone.stop();
     try {
       await ref
           .read(rejectDriverOfferUseCaseProvider)

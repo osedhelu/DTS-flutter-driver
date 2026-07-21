@@ -16,7 +16,8 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/shell/presentation/screens/driver_shell_screen.dart';
 import '../di/providers.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _rootNavigatorKey = rootNavigatorKey;
 
 class AuthRouterListenable extends ChangeNotifier {
   AuthRouterListenable(this._ref) {

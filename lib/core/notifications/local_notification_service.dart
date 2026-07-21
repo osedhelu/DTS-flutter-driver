@@ -1,7 +1,11 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 typedef NotificationTapCallback = void Function(String? payload);
+
+bool get _isAndroid =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 class LocalNotificationService {
   LocalNotificationService();
@@ -25,6 +29,35 @@ class LocalNotificationService {
         onTap?.call(response.payload);
       },
     );
+
+    if (_isAndroid) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'driver_offers',
+          'Ofertas',
+          description: 'Nuevas ofertas de pedidos',
+          importance: Importance.max,
+          playSound: true,
+          sound: RawResourceAndroidNotificationSound('new_order'),
+        ),
+      );
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'order_chat',
+          'Chat de pedidos',
+          description: 'Mensajes del chat con el cliente',
+          importance: Importance.high,
+          playSound: true,
+        ),
+      );
+    }
+
     _ready = true;
   }
 
@@ -41,10 +74,17 @@ class LocalNotificationService {
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
+      sound: RawResourceAndroidNotificationSound('new_order'),
+      category: AndroidNotificationCategory.call,
+      fullScreenIntent: true,
     );
     const details = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(presentSound: true),
+      iOS: DarwinNotificationDetails(
+        presentSound: true,
+        sound: 'new_order.wav',
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      ),
     );
     try {
       await _plugin.show(
@@ -56,6 +96,37 @@ class LocalNotificationService {
       );
     } catch (e) {
       if (kDebugMode) debugPrint('LocalNotification show failed: $e');
+    }
+  }
+
+  Future<void> showChat({
+    required int orderId,
+    required String title,
+    required String body,
+  }) async {
+    if (!_ready) return;
+    const androidDetails = AndroidNotificationDetails(
+      'order_chat',
+      'Chat de pedidos',
+      channelDescription: 'Mensajes del chat con el cliente',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(presentSound: true),
+    );
+    try {
+      await _plugin.show(
+        100000 + orderId,
+        title,
+        body,
+        details,
+        payload: 'chat:$orderId',
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('LocalNotification chat failed: $e');
     }
   }
 
