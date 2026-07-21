@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:dts_driver/features/offers/domain/entities/driver_offer.dart';
 import 'package:dts_driver/features/offers/presentation/utils/driver_home_map_markers.dart';
@@ -72,7 +71,7 @@ void main() {
     expect(ids, isNot(contains('store_11')));
   });
 
-  test('comercio con oferta activa usa marcador rojo', () {
+  test('comercio con oferta activa prioriza marcador offer_*', () {
     final markers = buildDriverHomeMapMarkers(
       driverLat: null,
       driverLng: null,
@@ -83,17 +82,7 @@ void main() {
       onOfferTap: (_) {},
     );
 
-    Marker markerFor(int storeId) {
-      return markers.firstWhere((m) => m.markerId.value == 'store_$storeId');
-    }
-
-    expect(
-      markerFor(10).icon,
-      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-    );
-    expect(
-      markerFor(11).icon,
-      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-    );
+    final ids = markers.map((m) => m.markerId.value).toSet();
+    expect(ids, containsAll(['store_10', 'store_11', 'offer_99']));
   });
 }

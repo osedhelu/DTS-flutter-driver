@@ -26,7 +26,6 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   bool _isLoading = true;
   bool _storesLoading = true;
   String? _error;
-  String? _storesError;
   bool _isOnline = false;
   bool _toggling = false;
   bool _gpsDenied = false;
@@ -125,7 +124,6 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   Future<void> _loadStores() async {
     setState(() {
       _storesLoading = true;
-      _storesError = null;
     });
     try {
       final stores = await ref.read(getStoresUseCaseProvider).call();
@@ -137,7 +135,6 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _storesError = 'No se pudieron cargar los comercios';
         _storesLoading = false;
       });
     }
@@ -256,76 +253,82 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
                         horizontal: 12,
                         vertical: 8,
                       ),
-                      child: Row(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _isOnline
-                                  ? Colors.green
-                                  : theme.colorScheme.outline,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _isOnline ? 'En línea' : 'Desconectado',
-                                  style: theme.textTheme.titleSmall,
+                          Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _isOnline
+                                      ? Colors.green
+                                      : theme.colorScheme.outline,
                                 ),
-                                Text(
-                                  _isOnline
-                                      ? 'Recibiendo ofertas cercanas'
-                                      : 'Actívate para ganar',
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _isOnline ? 'En línea' : 'Desconectado',
+                                      style: theme.textTheme.titleSmall,
+                                    ),
+                                    Text(
+                                      _isOnline
+                                          ? 'Recibiendo ofertas cercanas'
+                                          : 'Actívate para ganar',
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_toggling)
+                                const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              else
+                                Switch(
+                                  key: const Key('availability_switch'),
+                                  value: _isOnline,
+                                  onChanged: _toggleOnline,
+                                ),
+                            ],
+                          ),
+                          const Divider(height: 16),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.storefront_outlined,
+                                size: 18,
+                                color: theme.colorScheme.outline,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _storesLoading
+                                      ? 'Cargando comercios…'
+                                      : '${_stores.length} comercios en el mapa',
                                   style: theme.textTheme.bodySmall,
                                 ),
-                              ],
-                            ),
-                          ),
-                          if (_toggling)
-                            const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          else
-                            Switch(
-                              key: const Key('availability_switch'),
-                              value: _isOnline,
-                              onChanged: _toggleOnline,
-                            ),
-                        ],
-                      ),
-                      const Divider(height: 16),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.storefront_outlined,
-                            size: 18,
-                            color: theme.colorScheme.outline,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _storesLoading
-                                  ? 'Cargando comercios…'
-                                  : '${_stores.length} comercios en el mapa',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ),
-                          Text(
-                            'Mostrar',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                          Switch(
-                            key: const Key('show_stores_switch'),
-                            value: _showStores,
-                            onChanged: (value) =>
-                                setState(() => _showStores = value),
+                              ),
+                              Text(
+                                'Mostrar',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              Switch(
+                                key: const Key('show_stores_switch'),
+                                value: _showStores,
+                                onChanged: (value) =>
+                                    setState(() => _showStores = value),
+                              ),
+                            ],
                           ),
                         ],
                       ),
