@@ -40,6 +40,7 @@ final authRouterListenableProvider = Provider<AuthRouterListenable>((ref) {
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Mantener vivo el listenable; notifyListeners solo hace refresh del redirect.
   final refresh = ref.watch(authRouterListenableProvider);
+  ref.keepAlive();
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,

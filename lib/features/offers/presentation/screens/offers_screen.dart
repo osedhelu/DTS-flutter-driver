@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/router/active_delivery_navigation.dart';
 import '../../domain/entities/driver_offer.dart';
 
 class OffersScreen extends ConsumerStatefulWidget {
@@ -96,7 +97,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Pedido #${offer.orderId} aceptado')),
       );
-      context.push('/active/${offer.orderId}');
+      navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

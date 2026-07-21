@@ -102,8 +102,10 @@ class _DriverOrderDetailScreenState
                         const Spacer(),
                         if (order.isActive)
                           TextButton(
-                            onPressed: () =>
-                                navigateToActiveDelivery(context, order.id),
+                            onPressed: () => navigateToActiveDelivery(
+                              GoRouter.of(context),
+                              order.id,
+                            ),
                             child: const Text('Abrir mapa'),
                           ),
                       ],
@@ -153,7 +155,10 @@ class _DriverOrderDetailScreenState
                                 .read(acceptOrderUseCaseProvider)
                                 .call(order.id);
                             if (context.mounted) {
-                              navigateToActiveDelivery(context, order.id);
+                              navigateToActiveDelivery(
+                                GoRouter.of(context),
+                                order.id,
+                              );
                             }
                           },
                         ),

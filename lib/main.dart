@@ -100,7 +100,7 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
         });
 
         if (orderId != null && type == 'driver_assigned') {
-          navigateRouterToActiveDelivery(router, orderId);
+          navigateToActiveDelivery(router, orderId);
         }
 
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -116,7 +116,7 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
         final orderId = int.tryParse('${data['order_id'] ?? ''}');
         final type = data['type']?.toString();
         if (orderId != null && type == 'driver_assigned') {
-          navigateRouterToActiveDelivery(
+          navigateToActiveDelivery(
             ref.read(appRouterProvider),
             orderId,
           );

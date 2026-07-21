@@ -113,7 +113,10 @@ class _DriverOrdersScreenState extends ConsumerState<DriverOrdersScreen> {
                                 ),
                                 onTap: () {
                                   if (order.isActive) {
-                                    navigateToActiveDelivery(context, order.id);
+                                    navigateToActiveDelivery(
+                                      GoRouter.of(context),
+                                      order.id,
+                                    );
                                   } else {
                                     context.go('/orders/${order.id}');
                                   }

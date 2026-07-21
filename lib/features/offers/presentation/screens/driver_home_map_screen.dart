@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/di/providers.dart';
@@ -167,13 +168,17 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   }
 
   Future<void> _openOffer(DriverOffer offer) async {
-    await Navigator.of(context).push<bool>(
+    final accepted = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => IncomingOfferScreen(offer: offer),
       ),
     );
-    await _loadOffers();
+    if (!mounted) return;
+    if (accepted == true) {
+      navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
+    }
+    await Future.wait([_loadOffers(), _loadActiveOrders()]);
   }
 
   Future<void> _accept(DriverOffer offer) async {
@@ -181,7 +186,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
     try {
       await ref.read(acceptDriverOfferUseCaseProvider).call(offer.orderId);
       if (!mounted) return;
-      navigateToActiveDelivery(context, offer.orderId);
+      navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -469,7 +474,8 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
                       : 'Tienda #${order.storeId}',
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => navigateToActiveDelivery(context, order.id),
+                onTap: () =>
+                    navigateToActiveDelivery(GoRouter.of(context), order.id),
               ),
             ),
           ),
