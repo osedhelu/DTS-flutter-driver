@@ -30,6 +30,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Misma API key del proyecto Firebase dtsdrop-85330 (Maps SDK Android). -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBj-DmYwHfG6kvSKoCF-kqC4tvt3v9pQBI" />
     </application>
     <queries>
         <intent>

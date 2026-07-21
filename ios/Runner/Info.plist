@@ -61,6 +61,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>GMSApiKey</key>
+	<string>AIzaSyAy9TvSRYhYg83Gx9aBaafGNZaTzGTe1Z4</string>
 	<key>GIDClientID</key>
 	<string>1015036938407-8fvoe01ns93vce534lgseo9knquiqq68.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>

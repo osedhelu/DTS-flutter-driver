@@ -5,7 +5,7 @@ import 'package:dts_driver/features/notifications/domain/handlers/new_order_noti
 
 void main() {
   test('new_order_notification_handler_test', () {
-    final handler = NewOrderNotificationHandler();
+    const handler = NewOrderNotificationHandler();
     int? capturedOrderId;
 
     handler.handleMessage(
@@ -19,7 +19,7 @@ void main() {
   });
 
   test('handles lowercase ready_for_pickup', () {
-    final handler = NewOrderNotificationHandler();
+    const handler = NewOrderNotificationHandler();
     int? capturedOrderId;
 
     handler.handleMessage(
@@ -33,7 +33,7 @@ void main() {
   });
 
   test('ignores non offer messages', () {
-    final handler = NewOrderNotificationHandler();
+    const handler = NewOrderNotificationHandler();
     var called = false;
 
     handler.handleMessage(

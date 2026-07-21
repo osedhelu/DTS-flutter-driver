@@ -1,4 +1,5 @@
 import Flutter
+import GoogleMaps
 import UIKit
 
 @main
@@ -7,6 +8,9 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Misma API key del proyecto Firebase dtsdrop-85330 (Maps SDK iOS).
+    // Sin esto, GoogleMap aborta la app en checkServicePreconditions.
+    GMSServices.provideAPIKey("AIzaSyAy9TvSRYhYg83Gx9aBaafGNZaTzGTe1Z4")
     GeneratedPluginRegistrant.register(with: self)
     // Necesario para que APNS entregue el device token a Firebase Messaging.
     application.registerForRemoteNotifications()

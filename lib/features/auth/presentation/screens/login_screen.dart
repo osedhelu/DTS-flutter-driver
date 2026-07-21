@@ -53,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'No se pudo iniciar sesión';
+          _error = _friendlyAuthError(e);
           _isLoading = false;
         });
       }
@@ -81,6 +81,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _signInWithApple() async {
     await _afterAuth(() => ref.read(appleSignInUseCaseProvider).call());
+  }
+
+  String _friendlyAuthError(Object e) {
+    final raw = e is StateError ? e.message : e.toString();
+    final message = raw
+        .replaceFirst(RegExp(r'^Bad state:\s*'), '')
+        .replaceFirst(RegExp(r'^Exception:\s*'), '')
+        .trim();
+    if (message.isEmpty) {
+      return 'No se pudo iniciar sesión';
+    }
+    return message;
   }
 
   bool get _showApple => !kIsWeb && (Platform.isIOS || Platform.isMacOS);

@@ -27,6 +27,9 @@ class GoogleSignInUseCase {
   final FirebaseAuth _firebaseAuth;
 
   Future<AuthSession> call() async {
+    // Cierra sesión previa para forzar el selector de cuentas de Google.
+    await _clearPreviousGoogleSession();
+
     final account = await _googleSignIn.signIn();
     if (account == null) {
       throw StateError('Inicio de sesión con Google cancelado');
@@ -50,5 +53,18 @@ class GoogleSignInUseCase {
     }
 
     return _repository.signInWithGoogle(idToken: idToken);
+  }
+
+  Future<void> _clearPreviousGoogleSession() async {
+    try {
+      await _firebaseAuth.signOut();
+    } catch (_) {}
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
+    try {
+      // En Android fuerza a volver a elegir cuenta (más agresivo que signOut).
+      await _googleSignIn.disconnect();
+    } catch (_) {}
   }
 }
