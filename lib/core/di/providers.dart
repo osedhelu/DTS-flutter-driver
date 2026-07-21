@@ -41,6 +41,10 @@ import '../../features/offers/domain/usecases/reject_driver_offer_usecase.dart';
 import '../../features/offers/infrastructure/datasources/driver_offer_remote_datasource.dart';
 import '../../features/offers/infrastructure/repositories/driver_offer_repository_impl.dart';
 import '../../features/earnings/infrastructure/datasources/earnings_remote_datasource.dart';
+import '../../features/stores/domain/repositories/stores_repository.dart';
+import '../../features/stores/domain/usecases/get_stores_usecase.dart';
+import '../../features/stores/infrastructure/datasources/stores_remote_datasource.dart';
+import '../../features/stores/infrastructure/repositories/stores_repository_impl.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
   return SecureTokenStorage();
@@ -236,6 +240,18 @@ final rejectDriverOfferUseCaseProvider =
 final earningsRemoteDataSourceProvider =
     Provider<EarningsRemoteDataSource>((ref) {
   return EarningsRemoteDataSource(ref.watch(apiClientProvider).dio);
+});
+
+final storesRemoteDataSourceProvider = Provider<StoresRemoteDataSource>((ref) {
+  return StoresRemoteDataSource(ref.watch(apiClientProvider).dio);
+});
+
+final storesRepositoryProvider = Provider<StoresRepository>((ref) {
+  return StoresRepositoryImpl(ref.watch(storesRemoteDataSourceProvider));
+});
+
+final getStoresUseCaseProvider = Provider<GetStoresUseCase>((ref) {
+  return GetStoresUseCase(ref.watch(storesRepositoryProvider));
 });
 
 final connectivityOfflineProvider = StateProvider<bool>((ref) => false);

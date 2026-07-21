@@ -57,8 +57,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return onboard.when(
             data: (completed) {
-              if (!completed && !isOnboarding) return '/onboarding';
-              if (completed && (isPublic || isOnboarding)) return '/home';
+              if (!completed && !isOnboarding) {
+                return loc == '/onboarding' ? null : '/onboarding';
+              }
+              if (completed && (isPublic || isOnboarding)) {
+                return loc == '/home' ? null : '/home';
+              }
               return null;
             },
             loading: () => null,

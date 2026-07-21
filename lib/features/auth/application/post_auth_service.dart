@@ -28,6 +28,7 @@ class PostAuthService {
       }
     }
     ref.invalidate(authStateProvider);
+    ref.invalidate(onboardingGateProvider);
   }
 }
 

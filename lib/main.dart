@@ -92,7 +92,10 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
             title: 'Nueva oferta',
             body: 'Tienes un pedido cercano #$id',
           );
-          router.go('/home');
+          final current = router.routerDelegate.currentConfiguration.uri.path;
+          if (current != '/home') {
+            router.go('/home');
+          }
         });
 
         if (orderId != null && type == 'driver_assigned') {

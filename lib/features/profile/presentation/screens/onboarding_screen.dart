@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
 import '../../domain/usecases/update_driver_profile_usecase.dart';
@@ -90,8 +89,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-
-    if (mounted) context.go('/home');
   }
 
   @override

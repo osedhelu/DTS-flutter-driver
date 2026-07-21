@@ -57,8 +57,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-
-    if (mounted) context.go('/home');
   }
 
   @override

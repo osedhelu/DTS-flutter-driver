@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/di/providers.dart';
@@ -59,6 +61,38 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         _error = 'No se pudo cargar el pedido';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _completeWithProof() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    setState(() => _updating = true);
+    try {
+      if (file != null) {
+        final dio = ref.read(apiClientProvider).dio;
+        final form = FormData.fromMap({
+          'photo': await MultipartFile.fromFile(file.path),
+        });
+        await dio.post(
+          '/orders/${widget.orderId}/proof-of-delivery/',
+          data: form,
+        );
+      } else {
+        await _updateStatus('delivered');
+        return;
+      }
+      if (!mounted) return;
+      ref.read(locationServiceProvider).stop();
+      unawaited(ref.read(localNotificationServiceProvider).cancelTracking());
+      context.go('/orders');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo registrar la entrega')),
+      );
+    } finally {
+      if (mounted) setState(() => _updating = false);
     }
   }
 
@@ -302,7 +336,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                               else if (order?.status == 'on_the_way')
                                 DtsPrimaryButton(
                                   label: 'Marcar entregado',
-                                  onPressed: () => _updateStatus('delivered'),
+                                  onPressed: _completeWithProof,
                                 ),
                             ],
                           ),

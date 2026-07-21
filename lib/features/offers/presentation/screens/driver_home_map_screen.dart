@@ -5,7 +5,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/di/providers.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../stores/domain/entities/store.dart';
+import '../../../stores/presentation/widgets/store_info_sheet.dart';
 import '../../domain/entities/driver_offer.dart';
+import '../utils/driver_home_map_markers.dart';
 import 'incoming_offer_screen.dart';
 
 /// Home estilo Uber: mapa + sheet de ofertas + toggle online.
@@ -19,11 +22,15 @@ class DriverHomeMapScreen extends ConsumerStatefulWidget {
 
 class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   List<DriverOffer> _offers = [];
+  List<Store> _stores = [];
   bool _isLoading = true;
+  bool _storesLoading = true;
   String? _error;
+  String? _storesError;
   bool _isOnline = false;
   bool _toggling = false;
   bool _gpsDenied = false;
+  bool _showStores = true;
   double? _lat;
   double? _lng;
   int? _actionOrderId;
@@ -41,7 +48,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
       if (mounted) setState(() => _isOnline = profile.isOnline);
     } catch (_) {}
     await _refreshLocation();
-    await _loadOffers();
+    await Future.wait([_loadOffers(), _loadStores()]);
   }
 
   Future<void> _refreshLocation() async {
@@ -115,6 +122,31 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
     }
   }
 
+  Future<void> _loadStores() async {
+    setState(() {
+      _storesLoading = true;
+      _storesError = null;
+    });
+    try {
+      final stores = await ref.read(getStoresUseCaseProvider).call();
+      if (!mounted) return;
+      setState(() {
+        _stores = stores.where((s) => s.hasValidLocation).toList();
+        _storesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _storesError = 'No se pudieron cargar los comercios';
+        _storesLoading = false;
+      });
+    }
+  }
+
+  void _showStoreSheet(Store store) {
+    StoreInfoSheet.show(context, store);
+  }
+
   Future<void> _openOffer(DriverOffer offer) async {
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -166,26 +198,15 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
         ? LatLng(_lat!, _lng!)
         : const LatLng(4.711, -74.072);
 
-    final markers = <Marker>{
-      if (_lat != null && _lng != null)
-        Marker(
-          markerId: const MarkerId('me'),
-          position: LatLng(_lat!, _lng!),
-          infoWindow: const InfoWindow(title: 'Tú'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        ),
-      ..._offers.map(
-        (o) => Marker(
-          markerId: MarkerId('offer_${o.orderId}'),
-          position: LatLng(o.storeLatitude, o.storeLongitude),
-          infoWindow: InfoWindow(
-            title: o.storeName.isEmpty ? 'Pedido #${o.orderId}' : o.storeName,
-            snippet: '${o.distanceKm.toStringAsFixed(1)} km',
-          ),
-          onTap: () => _openOffer(o),
-        ),
-      ),
-    };
+    final markers = buildDriverHomeMapMarkers(
+      driverLat: _lat,
+      driverLng: _lng,
+      stores: _stores,
+      offers: _offers,
+      showStores: _showStores,
+      onStoreTap: _showStoreSheet,
+      onOfferTap: _openOffer,
+    );
 
     return Scaffold(
       body: Stack(
@@ -279,6 +300,35 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
                             ),
                         ],
                       ),
+                      const Divider(height: 16),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.storefront_outlined,
+                            size: 18,
+                            color: theme.colorScheme.outline,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _storesLoading
+                                  ? 'Cargando comercios…'
+                                  : '${_stores.length} comercios en el mapa',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ),
+                          Text(
+                            'Mostrar',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          Switch(
+                            key: const Key('show_stores_switch'),
+                            value: _showStores,
+                            onChanged: (value) =>
+                                setState(() => _showStores = value),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -368,7 +418,9 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
               icon: Icons.local_shipping_outlined,
               title: 'Sin ofertas',
               message: _isOnline
-                  ? 'Mantente cerca: te avisaremos cuando haya pedidos.'
+                  ? _stores.isNotEmpty
+                      ? 'Explora comercios en el mapa mientras esperas pedidos.'
+                      : 'Mantente cerca: te avisaremos cuando haya pedidos.'
                   : 'Activa el interruptor para empezar a recibir pedidos.',
             ),
           ),
