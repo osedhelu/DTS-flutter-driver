@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/di/providers.dart';
+import 'core/router/active_delivery_navigation.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/widgets.dart';
@@ -99,7 +100,7 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
         });
 
         if (orderId != null && type == 'driver_assigned') {
-          router.push('/active/$orderId');
+          navigateRouterToActiveDelivery(router, orderId);
         }
 
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -115,7 +116,10 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
         final orderId = int.tryParse('${data['order_id'] ?? ''}');
         final type = data['type']?.toString();
         if (orderId != null && type == 'driver_assigned') {
-          ref.read(appRouterProvider).go('/active/$orderId');
+          navigateRouterToActiveDelivery(
+            ref.read(appRouterProvider),
+            orderId,
+          );
         } else if (orderId != null) {
           ref.read(appRouterProvider).go('/home');
         }

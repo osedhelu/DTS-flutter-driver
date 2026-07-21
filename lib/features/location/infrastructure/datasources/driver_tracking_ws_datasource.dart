@@ -8,6 +8,7 @@ import '../../../../core/config/env.dart';
 /// Conexión WS inyectable (tests).
 abstract class DriverTrackingWsConnection {
   Stream<dynamic> get messages;
+  Future<void> get ready;
   void send(Object? message);
   Future<void> close();
 }
@@ -23,6 +24,9 @@ class WebSocketDriverTrackingConnection implements DriverTrackingWsConnection {
 
   @override
   Stream<dynamic> get messages => _channel.stream;
+
+  @override
+  Future<void> get ready => _channel.ready;
 
   @override
   void send(Object? message) => _channel.sink.add(message);
@@ -56,13 +60,13 @@ class DriverTrackingWsDataSource {
     return WebSocketDriverTrackingConnection(WebSocketChannel.connect(uri));
   }
 
+  /// Evita `Uri.replace` (en `wss` puede serializar puerto `:0` y romper el handshake).
   Uri buildUri({required int orderId, required String accessToken}) {
     final base = _wsBaseUrl.endsWith('/')
         ? _wsBaseUrl.substring(0, _wsBaseUrl.length - 1)
         : _wsBaseUrl;
-    return Uri.parse('$base/ws/orders/$orderId/tracking/').replace(
-      queryParameters: {'token': accessToken},
-    );
+    final token = Uri.encodeQueryComponent(accessToken);
+    return Uri.parse('$base/ws/orders/$orderId/tracking/?token=$token');
   }
 
   Future<void> connect({
@@ -73,7 +77,9 @@ class DriverTrackingWsDataSource {
 
     await disconnect();
     final uri = buildUri(orderId: orderId, accessToken: accessToken);
-    _connection = _connectionFactory(uri);
+    final connection = _connectionFactory(uri);
+    await connection.ready;
+    _connection = connection;
     _connectedOrderId = orderId;
   }
 

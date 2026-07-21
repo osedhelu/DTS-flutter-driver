@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/router/active_delivery_navigation.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../orders/domain/entities/driver_order.dart';
 import '../../../stores/domain/entities/store.dart';
 import '../../../stores/presentation/widgets/store_info_sheet.dart';
 import '../../domain/entities/driver_offer.dart';
@@ -22,6 +23,7 @@ class DriverHomeMapScreen extends ConsumerStatefulWidget {
 
 class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   List<DriverOffer> _offers = [];
+  List<DriverOrder> _activeOrders = [];
   List<Store> _stores = [];
   bool _isLoading = true;
   bool _storesLoading = true;
@@ -50,7 +52,17 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
       }
     } catch (_) {}
     await _refreshLocation();
-    await Future.wait([_loadOffers(), _loadStores()]);
+    await Future.wait([_loadOffers(), _loadStores(), _loadActiveOrders()]);
+  }
+
+  Future<void> _loadActiveOrders() async {
+    try {
+      final orders = await ref.read(driverOrderRepositoryProvider).listOrders();
+      if (!mounted) return;
+      setState(() {
+        _activeOrders = orders.where((order) => order.isActive).toList();
+      });
+    } catch (_) {}
   }
 
   Future<void> _refreshLocation() async {
@@ -93,7 +105,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
       setState(() => _isOnline = result.isOnline);
       ref.read(locationServiceProvider).start(isOnline: result.isOnline);
       if (result.isOnline) {
-        await _loadOffers();
+        await Future.wait([_loadOffers(), _loadActiveOrders()]);
       }
     } catch (e) {
       if (!mounted) return;
@@ -169,7 +181,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
     try {
       await ref.read(acceptDriverOfferUseCaseProvider).call(offer.orderId);
       if (!mounted) return;
-      context.push('/active/${offer.orderId}');
+      navigateToActiveDelivery(context, offer.orderId);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -378,13 +390,25 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
                             : 'Ponte en línea',
                         trailing: IconButton(
                           icon: const Icon(Icons.refresh),
-                          onPressed: _isLoading ? null : _loadOffers,
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  await Future.wait([
+                                    _loadOffers(),
+                                    _loadActiveOrders(),
+                                  ]);
+                                },
                         ),
                       ),
                     ),
                     Expanded(
                       child: RefreshIndicator(
-                        onRefresh: _loadOffers,
+                        onRefresh: () async {
+                          await Future.wait([
+                            _loadOffers(),
+                            _loadActiveOrders(),
+                          ]);
+                        },
                         child: _buildSheetBody(scrollController),
                       ),
                     ),
@@ -420,107 +444,150 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
         ],
       );
     }
-    if (_offers.isEmpty) {
-      return ListView(
-        controller: scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          SizedBox(
-            height: 220,
-            child: DtsEmptyState(
-              icon: Icons.local_shipping_outlined,
-              title: 'Sin ofertas',
-              message: _isOnline
-                  ? _stores.isNotEmpty
-                      ? 'Explora comercios en el mapa mientras esperas pedidos.'
-                      : 'Mantente cerca: te avisaremos cuando haya pedidos.'
-                  : 'Activa el interruptor para empezar a recibir pedidos.',
-            ),
-          ),
-        ],
-      );
-    }
 
-    return ListView.separated(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      itemCount: _offers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final offer = _offers[index];
-        final busy = _actionOrderId == offer.orderId;
-        return Card(
-          key: Key('offer_card_${offer.orderId}'),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => _openOffer(offer),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.secondaryContainer,
-                        child: const Icon(Icons.storefront),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              offer.storeName.isEmpty
-                                  ? 'Pedido #${offer.orderId}'
-                                  : offer.storeName,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            Text(
-                              '${offer.distanceKm.toStringAsFixed(1)} km · \$${offer.total}',
-                            ),
-                          ],
-                        ),
-                      ),
-                      DtsStatusChip(
-                        label: offer.status,
-                        tone: DtsStatusChip.toneForStatus(offer.status),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (busy)
-                    const LinearProgressIndicator()
-                  else
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            key: Key('offer_reject_${offer.orderId}'),
-                            onPressed: () => _reject(offer),
-                            child: const Text('Rechazar'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            key: Key('offer_accept_${offer.orderId}'),
-                            onPressed: () => _accept(offer),
-                            child: const Text('Aceptar'),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+    final children = <Widget>[];
+
+    if (_activeOrders.isNotEmpty) {
+      children.addAll([
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: DtsSectionHeader(
+            title: 'Entregas activas',
+            subtitle: '${_activeOrders.length} en curso',
+          ),
+        ),
+        ..._activeOrders.map(
+          (order) => Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Card(
+              child: ListTile(
+                leading: const Icon(Icons.local_shipping_outlined),
+                title: Text('Pedido #${order.id}'),
+                subtitle: Text(
+                  order.storeName.isNotEmpty
+                      ? order.storeName
+                      : 'Tienda #${order.storeId}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => navigateToActiveDelivery(context, order.id),
               ),
             ),
           ),
-        );
-      },
+        ),
+        const Divider(height: 24),
+      ]);
+    }
+
+    if (_offers.isEmpty) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: DtsEmptyState(
+            icon: Icons.local_shipping_outlined,
+            title: 'Sin ofertas nuevas',
+            message: _isOnline
+                ? _gpsDenied
+                    ? 'Activa el permiso de ubicación para ver pedidos cercanos.'
+                    : 'Aparecen cuando el comercio busca conductor. Revisa Mis pedidos.'
+                : 'Activa el interruptor para empezar a recibir pedidos.',
+          ),
+        ),
+      );
+      return ListView(
+        controller: scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: children,
+      );
+    }
+
+    children.addAll(
+      _offers.asMap().entries.map(
+        (entry) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: _buildOfferCard(entry.value),
+        ),
+      ),
+    );
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.only(bottom: 24),
+      children: children,
+    );
+  }
+
+  Widget _buildOfferCard(DriverOffer offer) {
+    final busy = _actionOrderId == offer.orderId;
+    return Card(
+      key: Key('offer_card_${offer.orderId}'),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openOffer(offer),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.secondaryContainer,
+                    child: const Icon(Icons.storefront),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          offer.storeName.isEmpty
+                              ? 'Pedido #${offer.orderId}'
+                              : offer.storeName,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          '${offer.distanceKm.toStringAsFixed(1)} km · \$${offer.total}',
+                        ),
+                      ],
+                    ),
+                  ),
+                  DtsStatusChip(
+                    label: offer.status,
+                    tone: DtsStatusChip.toneForStatus(offer.status),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (busy)
+                const LinearProgressIndicator()
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        key: Key('offer_reject_${offer.orderId}'),
+                        onPressed: () => _reject(offer),
+                        child: const Text('Rechazar'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        key: Key('offer_accept_${offer.orderId}'),
+                        onPressed: () => _accept(offer),
+                        child: const Text('Aceptar'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

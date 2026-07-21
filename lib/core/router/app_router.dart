@@ -16,6 +16,8 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/shell/presentation/screens/driver_shell_screen.dart';
 import '../di/providers.dart';
 
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
 class AuthRouterListenable extends ChangeNotifier {
   AuthRouterListenable(this._ref) {
     _ref.listen<AsyncValue<bool>>(authStateProvider, (_, __) {
@@ -36,9 +38,11 @@ final authRouterListenableProvider = Provider<AuthRouterListenable>((ref) {
 });
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // Mantener vivo el listenable; notifyListeners solo hace refresh del redirect.
   final refresh = ref.watch(authRouterListenableProvider);
 
   return GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
     refreshListenable: refresh,
     redirect: (context, state) {
@@ -155,6 +159,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/active/:id',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
           return ActiveDeliveryScreen(orderId: id);
@@ -162,14 +167,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/history',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const HistoryScreen(),
       ),
       GoRoute(
         path: '/settings',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/help',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const HelpScreen(),
       ),
       GoRoute(

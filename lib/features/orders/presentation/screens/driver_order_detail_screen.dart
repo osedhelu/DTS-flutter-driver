@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/router/active_delivery_navigation.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../domain/entities/driver_order.dart';
 import '../../domain/value_objects/order_status.dart';
@@ -102,7 +103,7 @@ class _DriverOrderDetailScreenState
                         if (order.isActive)
                           TextButton(
                             onPressed: () =>
-                                context.push('/active/${order.id}'),
+                                navigateToActiveDelivery(context, order.id),
                             child: const Text('Abrir mapa'),
                           ),
                       ],
@@ -152,7 +153,7 @@ class _DriverOrderDetailScreenState
                                 .read(acceptOrderUseCaseProvider)
                                 .call(order.id);
                             if (context.mounted) {
-                              context.push('/active/${order.id}');
+                              navigateToActiveDelivery(context, order.id);
                             }
                           },
                         ),

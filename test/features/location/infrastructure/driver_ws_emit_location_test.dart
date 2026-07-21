@@ -15,6 +15,9 @@ class _FakeDriverWsConnection implements DriverTrackingWsConnection {
   Stream<dynamic> get messages => _controller.stream;
 
   @override
+  Future<void> get ready => Future<void>.value();
+
+  @override
   void send(Object? message) => sent.add(message);
 
   @override

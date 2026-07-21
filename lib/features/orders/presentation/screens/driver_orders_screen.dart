@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/router/active_delivery_navigation.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../domain/entities/driver_order.dart';
 
@@ -112,7 +113,7 @@ class _DriverOrdersScreenState extends ConsumerState<DriverOrdersScreen> {
                                 ),
                                 onTap: () {
                                   if (order.isActive) {
-                                    context.push('/active/${order.id}');
+                                    navigateToActiveDelivery(context, order.id);
                                   } else {
                                     context.go('/orders/${order.id}');
                                   }

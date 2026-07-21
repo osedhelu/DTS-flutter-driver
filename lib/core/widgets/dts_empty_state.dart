@@ -19,15 +19,19 @@ class DtsEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tight = constraints.maxHeight.isFinite && constraints.maxHeight < 220;
+        final content = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: theme.colorScheme.outline),
+            Icon(
+              icon,
+              size: tight ? 40 : 56,
+              color: theme.colorScheme.outline,
+            ),
             if (title != null) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: tight ? 8 : 16),
               Text(
                 title!,
                 textAlign: TextAlign.center,
@@ -36,21 +40,30 @@ class DtsEmptyState extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 12),
+            SizedBox(height: tight ? 8 : 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge?.copyWith(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 20),
+              SizedBox(height: tight ? 12 : 20),
               FilledButton(onPressed: onAction, child: Text(actionLabel!)),
             ],
           ],
-        ),
-      ),
+        );
+
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(tight ? 16 : 32),
+            child: constraints.maxHeight.isFinite
+                ? SingleChildScrollView(child: content)
+                : content,
+          ),
+        );
+      },
     );
   }
 }

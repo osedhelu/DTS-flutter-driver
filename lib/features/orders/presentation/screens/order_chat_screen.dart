@@ -70,7 +70,8 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
       final token = await ref.read(tokenStorageProvider).getAccessToken();
       if (token == null || token.isEmpty) return;
       final uri = Uri.parse(
-        '${EnvConfig.wsBaseUrl}/ws/orders/${widget.orderId}/chat/?token=$token',
+        '${EnvConfig.wsBaseUrl}/ws/orders/${widget.orderId}/chat/'
+        '?token=${Uri.encodeQueryComponent(token)}',
       );
       _channel = WebSocketChannel.connect(uri);
       _sub = _channel!.stream.listen((event) {
