@@ -29,8 +29,8 @@ class LocationService {
   bool get isRunning => _timer != null;
 
   void start({required bool isOnline}) {
-    _isOnline = isOnline;
     stop();
+    _isOnline = isOnline;
     if (!isOnline) return;
 
     _timer = _timerFactory(interval, (_) => _tick());
@@ -43,13 +43,17 @@ class LocationService {
   }
 
   Future<void> _tick() async {
+    if (!_isOnline || _timer == null) return;
+
     try {
       final granted = await _geolocatorService.isPermissionGranted();
-      if (!granted) return;
+      if (!granted || !_isOnline || _timer == null) return;
 
       final position = await _geolocatorService.getCurrentPosition();
+      if (!_isOnline || _timer == null) return;
+
       await _sendLocationUseCase.call(
-        isOnline: _isOnline,
+        isOnline: true,
         latitude: position.latitude,
         longitude: position.longitude,
       );

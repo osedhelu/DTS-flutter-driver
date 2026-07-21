@@ -21,7 +21,19 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInitialPosition();
+    _loadInitialState();
+  }
+
+  Future<void> _loadInitialState() async {
+    try {
+      final profile = await ref.read(getDriverProfileUseCaseProvider).call();
+      if (!mounted) return;
+      setState(() => _isOnline = profile.isOnline);
+      ref.read(locationServiceProvider).start(isOnline: profile.isOnline);
+    } catch (_) {
+      // Perfil no disponible; el switch arranca en offline.
+    }
+    await _loadInitialPosition();
   }
 
   Future<void> _loadInitialPosition() async {
@@ -45,12 +57,16 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
   }
 
   Future<void> _onToggle(bool value) async {
+    final previous = _isOnline;
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
+      double? latitude = _latitude;
+      double? longitude = _longitude;
+
       if (value) {
         final geolocator = ref.read(geolocatorServiceProvider);
         final granted = await geolocator.isPermissionGranted() ||
@@ -59,29 +75,32 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
           throw Exception('Permiso de ubicación denegado');
         }
         final position = await geolocator.getCurrentPosition();
-        _latitude = position.latitude;
-        _longitude = position.longitude;
+        latitude = position.latitude;
+        longitude = position.longitude;
       }
 
       final availability = await ref.read(toggleOnlineUseCaseProvider).call(
             isOnline: value,
-            latitude: _latitude,
-            longitude: _longitude,
+            latitude: value ? latitude : null,
+            longitude: value ? longitude : null,
           );
 
       if (!mounted) return;
       setState(() {
         _isOnline = availability.isOnline;
-        _latitude = availability.latitude ?? _latitude;
-        _longitude = availability.longitude ?? _longitude;
+        _latitude = availability.latitude ?? latitude;
+        _longitude = availability.longitude ?? longitude;
         _isLoading = false;
       });
+      ref.read(locationServiceProvider).start(isOnline: availability.isOnline);
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _isOnline = previous;
         _error = e.toString();
         _isLoading = false;
       });
+      ref.read(locationServiceProvider).start(isOnline: previous);
     }
   }
 

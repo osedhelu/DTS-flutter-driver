@@ -64,6 +64,16 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     }
   }
 
+  Future<void> _finishDeliveryTracking() async {
+    unawaited(ref.read(localNotificationServiceProvider).cancelTracking());
+    try {
+      final profile = await ref.read(getDriverProfileUseCaseProvider).call();
+      ref.read(locationServiceProvider).start(isOnline: profile.isOnline);
+    } catch (_) {
+      ref.read(locationServiceProvider).stop();
+    }
+  }
+
   Future<void> _completeWithProof() async {
     final picker = ImagePicker();
     final file = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
@@ -83,8 +93,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         return;
       }
       if (!mounted) return;
-      ref.read(locationServiceProvider).stop();
-      unawaited(ref.read(localNotificationServiceProvider).cancelTracking());
+      await _finishDeliveryTracking();
       context.go('/orders');
     } catch (e) {
       if (!mounted) return;
@@ -106,8 +115,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       if (!mounted) return;
       setState(() => _order = updated);
       if (status == 'delivered') {
-        ref.read(locationServiceProvider).stop();
-        unawaited(ref.read(localNotificationServiceProvider).cancelTracking());
+        await _finishDeliveryTracking();
         context.go('/orders');
       }
     } catch (e) {

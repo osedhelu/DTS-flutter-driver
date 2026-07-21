@@ -44,7 +44,10 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   Future<void> _bootstrap() async {
     try {
       final profile = await ref.read(getDriverProfileUseCaseProvider).call();
-      if (mounted) setState(() => _isOnline = profile.isOnline);
+      if (mounted) {
+        setState(() => _isOnline = profile.isOnline);
+        ref.read(locationServiceProvider).start(isOnline: profile.isOnline);
+      }
     } catch (_) {}
     await _refreshLocation();
     await Future.wait([_loadOffers(), _loadStores()]);
@@ -75,20 +78,27 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   }
 
   Future<void> _toggleOnline(bool value) async {
+    final previous = _isOnline;
     setState(() => _toggling = true);
     try {
-      await _refreshLocation();
+      if (value) {
+        await _refreshLocation();
+      }
       final result = await ref.read(toggleOnlineUseCaseProvider).call(
             isOnline: value,
-            latitude: _lat,
-            longitude: _lng,
+            latitude: value ? _lat : null,
+            longitude: value ? _lng : null,
           );
       if (!mounted) return;
       setState(() => _isOnline = result.isOnline);
-      ref.read(locationServiceProvider).start(isOnline: value);
-      await _loadOffers();
+      ref.read(locationServiceProvider).start(isOnline: result.isOnline);
+      if (result.isOnline) {
+        await _loadOffers();
+      }
     } catch (e) {
       if (!mounted) return;
+      setState(() => _isOnline = previous);
+      ref.read(locationServiceProvider).start(isOnline: previous);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo cambiar disponibilidad: $e')),
       );
