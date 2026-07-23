@@ -60,13 +60,15 @@ class DriverTrackingWsDataSource {
     return WebSocketDriverTrackingConnection(WebSocketChannel.connect(uri));
   }
 
-  /// Evita `Uri.replace` (en `wss` puede serializar puerto `:0` y romper el handshake).
+  /// Evita `port == 0` (rompe handshake como `host:0`).
   Uri buildUri({required int orderId, required String accessToken}) {
     final base = _wsBaseUrl.endsWith('/')
         ? _wsBaseUrl.substring(0, _wsBaseUrl.length - 1)
         : _wsBaseUrl;
     final token = Uri.encodeQueryComponent(accessToken);
-    return Uri.parse('$base/ws/orders/$orderId/tracking/?token=$token');
+    return EnvConfig.normalizeWsUri(
+      Uri.parse('$base/ws/orders/$orderId/tracking/?token=$token'),
+    );
   }
 
   Future<void> connect({

@@ -69,23 +69,33 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
     try {
       final token = await ref.read(tokenStorageProvider).getAccessToken();
       if (token == null || token.isEmpty) return;
-      final uri = Uri.parse(
-        '${EnvConfig.wsBaseUrl}/ws/orders/${widget.orderId}/chat/'
+      final uri = EnvConfig.buildWsUri(
+        '/ws/orders/${widget.orderId}/chat/'
         '?token=${Uri.encodeQueryComponent(token)}',
       );
-      _channel = WebSocketChannel.connect(uri);
-      _sub = _channel!.stream.listen((event) {
-        try {
-          final data = jsonDecode(event as String) as Map<String, dynamic>;
-          if (data['type'] == 'message' || data.containsKey('body')) {
-            if (!mounted) return;
-            final id = data['id'];
-            if (id != null && _messages.any((m) => m['id'] == id)) return;
-            setState(() => _messages.add(data));
-            _scrollToEnd();
-          }
-        } catch (_) {}
-      });
+      final channel = WebSocketChannel.connect(uri);
+      await channel.ready;
+      if (!mounted) {
+        await channel.sink.close();
+        return;
+      }
+      _channel = channel;
+      _sub = channel.stream.listen(
+        (event) {
+          try {
+            final data = jsonDecode(event as String) as Map<String, dynamic>;
+            if (data['type'] == 'message' || data.containsKey('body')) {
+              if (!mounted) return;
+              final id = data['id'];
+              if (id != null && _messages.any((m) => m['id'] == id)) return;
+              setState(() => _messages.add(data));
+              _scrollToEnd();
+            }
+          } catch (_) {}
+        },
+        onError: (_) {},
+        cancelOnError: true,
+      );
     } catch (_) {}
   }
 
