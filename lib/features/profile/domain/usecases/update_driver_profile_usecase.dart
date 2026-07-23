@@ -10,6 +10,9 @@ class UpdateDriverProfileParams {
     this.vehiclePlate,
     this.photoUrl,
     this.completeOnboarding = false,
+    this.workCenterLatitude,
+    this.workCenterLongitude,
+    this.workRadiusKm,
   });
 
   final String? fullName;
@@ -19,6 +22,9 @@ class UpdateDriverProfileParams {
   final String? vehiclePlate;
   final String? photoUrl;
   final bool completeOnboarding;
+  final double? workCenterLatitude;
+  final double? workCenterLongitude;
+  final double? workRadiusKm;
 }
 
 class UpdateDriverProfileUseCase {
@@ -35,6 +41,9 @@ class UpdateDriverProfileUseCase {
       vehiclePlate: params.vehiclePlate,
       photoUrl: params.photoUrl,
       completeOnboarding: params.completeOnboarding,
+      workCenterLatitude: params.workCenterLatitude,
+      workCenterLongitude: params.workCenterLongitude,
+      workRadiusKm: params.workRadiusKm,
     );
   }
 }

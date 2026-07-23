@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'core/di/providers.dart';
 import 'core/firebase/fcm_firebase_messaging_service.dart';
 import 'core/firebase/firebase_messaging_service.dart';
+import 'core/notifications/driver_fcm_registration.dart';
 import 'core/router/active_delivery_navigation.dart';
 import 'core/router/app_router.dart';
 import 'core/router/incoming_offer_navigation.dart';
@@ -51,6 +52,7 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   final _offerHandler = const NewOrderNotificationHandler();
   bool _handlingOffer = false;
+  DriverFcmRegistration? _fcmRegistration;
 
   @override
   void initState() {
@@ -61,6 +63,7 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
   @override
   void dispose() {
     _connectivitySub?.cancel();
+    _fcmRegistration?.dispose();
     super.dispose();
   }
 
@@ -95,6 +98,15 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
         fcm.onMessageOpenedApp.listen((msg) {
           unawaited(_routeFromData(Map<String, dynamic>.from(msg.data)));
         });
+      }
+
+      final auth = await ref.read(authStateProvider.future);
+      if (auth && !kIsWeb) {
+        _fcmRegistration = DriverFcmRegistration(
+          authRepository: ref.read(authRepositoryProvider),
+        );
+        _fcmRegistration!.listenTokenRefresh();
+        unawaited(_fcmRegistration!.register());
       }
 
       final initial = await FirebaseMessaging.instance.getInitialMessage();

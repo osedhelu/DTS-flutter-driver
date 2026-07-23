@@ -22,6 +22,9 @@ class DriverProfileRepositoryImpl implements DriverProfileRepository {
     String? vehiclePlate,
     String? photoUrl,
     bool completeOnboarding = false,
+    double? workCenterLatitude,
+    double? workCenterLongitude,
+    double? workRadiusKm,
   }) async {
     final dto = await _remoteDataSource.updateProfile(
       fullName: fullName,
@@ -31,6 +34,9 @@ class DriverProfileRepositoryImpl implements DriverProfileRepository {
       vehiclePlate: vehiclePlate,
       photoUrl: photoUrl,
       completeOnboarding: completeOnboarding,
+      workCenterLatitude: workCenterLatitude,
+      workCenterLongitude: workCenterLongitude,
+      workRadiusKm: workRadiusKm,
     );
     return dto.toEntity();
   }

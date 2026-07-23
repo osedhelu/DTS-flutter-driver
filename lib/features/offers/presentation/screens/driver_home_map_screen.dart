@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../../core/constants/location_radius_constants.dart';
 import '../../../../core/di/providers.dart';
 import '../../../../core/router/active_delivery_navigation.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../settings/presentation/widgets/open_driver_work_zone_picker.dart';
 import '../../../orders/domain/entities/driver_order.dart';
 import '../../../stores/domain/entities/store.dart';
 import '../../../stores/presentation/widgets/store_info_sheet.dart';
@@ -35,6 +37,9 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   bool _showStores = true;
   double? _lat;
   double? _lng;
+  double? _workCenterLat;
+  double? _workCenterLng;
+  double _workRadiusKm = defaultRadiusKm;
   int? _actionOrderId;
   GoogleMapController? _mapController;
 
@@ -48,12 +53,28 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
     try {
       final profile = await ref.read(getDriverProfileUseCaseProvider).call();
       if (mounted) {
-        setState(() => _isOnline = profile.isOnline);
+        setState(() {
+          _isOnline = profile.isOnline;
+          _workCenterLat = profile.workCenterLatitude;
+          _workCenterLng = profile.workCenterLongitude;
+          _workRadiusKm = profile.workRadiusKm;
+        });
         ref.read(locationServiceProvider).start(isOnline: profile.isOnline);
       }
     } catch (_) {}
     await _refreshLocation();
     await Future.wait([_loadOffers(), _loadStores(), _loadActiveOrders()]);
+  }
+
+  Future<void> _openWorkZonePicker() async {
+    final updated = await openDriverWorkZonePicker(context, ref);
+    if (updated == null || !mounted) return;
+    setState(() {
+      _workCenterLat = updated.workCenterLatitude;
+      _workCenterLng = updated.workCenterLongitude;
+      _workRadiusKm = updated.workRadiusKm;
+    });
+    await _loadOffers();
   }
 
   Future<void> _loadActiveOrders() async {
@@ -232,6 +253,22 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
       onOfferTap: _openOffer,
     );
 
+    final circles = (_workCenterLat != null && _workCenterLng != null)
+        ? {
+            Circle(
+              circleId: const CircleId('work_zone'),
+              center: LatLng(_workCenterLat!, _workCenterLng!),
+              radius: radiusKmToMeters(_workRadiusKm),
+              fillColor: theme.colorScheme.primary.withValues(alpha: 0.10),
+              strokeColor: theme.colorScheme.primary,
+              strokeWidth: 2,
+            ),
+          }
+        : const <Circle>{};
+
+    final workZoneLabel =
+        'Zona: ${normalizeRadiusPreset(_workRadiusKm).toStringAsFixed(0)} km';
+
     return Scaffold(
       body: Stack(
         children: [
@@ -241,6 +278,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             markers: markers,
+            circles: circles,
             onMapCreated: (c) => _mapController = c,
           ),
           SafeArea(
@@ -272,6 +310,18 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
                       ),
                     ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ActionChip(
+                      key: const Key('driver_work_zone_chip'),
+                      avatar: const Icon(Icons.radar_outlined, size: 18),
+                      label: Text(workZoneLabel),
+                      onPressed: _openWorkZonePicker,
+                    ),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Card(

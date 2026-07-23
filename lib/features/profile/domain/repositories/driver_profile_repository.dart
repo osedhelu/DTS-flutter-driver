@@ -11,5 +11,8 @@ abstract class DriverProfileRepository {
     String? vehiclePlate,
     String? photoUrl,
     bool completeOnboarding,
+    double? workCenterLatitude,
+    double? workCenterLongitude,
+    double? workRadiusKm,
   });
 }

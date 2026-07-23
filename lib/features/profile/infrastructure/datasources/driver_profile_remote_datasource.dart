@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/constants/location_radius_constants.dart';
 import '../../domain/entities/driver_profile.dart';
 
 class DriverProfileRemoteDataSource {
@@ -22,6 +23,9 @@ class DriverProfileRemoteDataSource {
     String? vehiclePlate,
     String? photoUrl,
     bool completeOnboarding = false,
+    double? workCenterLatitude,
+    double? workCenterLongitude,
+    double? workRadiusKm,
   }) async {
     final body = <String, dynamic>{
       if (fullName != null) 'full_name': fullName,
@@ -31,6 +35,11 @@ class DriverProfileRemoteDataSource {
       if (vehiclePlate != null) 'vehicle_plate': vehiclePlate,
       if (photoUrl != null) 'photo_url': photoUrl,
       'complete_onboarding': completeOnboarding,
+      if (workCenterLatitude != null)
+        'work_center_latitude': workCenterLatitude,
+      if (workCenterLongitude != null)
+        'work_center_longitude': workCenterLongitude,
+      if (workRadiusKm != null) 'work_radius_km': workRadiusKm,
     };
 
     final response = await _dio.patch<Map<String, dynamic>>(
@@ -51,6 +60,9 @@ class DriverProfileDto {
     required this.photoUrl,
     required this.onboardingCompleted,
     required this.isOnline,
+    this.workCenterLatitude,
+    this.workCenterLongitude,
+    this.workRadiusKm = defaultRadiusKm,
   });
 
   factory DriverProfileDto.fromJson(Map<String, dynamic> json) {
@@ -63,6 +75,10 @@ class DriverProfileDto {
       photoUrl: json['photo_url'] as String? ?? '',
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       isOnline: json['is_online'] as bool? ?? false,
+      workCenterLatitude: (json['work_center_latitude'] as num?)?.toDouble(),
+      workCenterLongitude: (json['work_center_longitude'] as num?)?.toDouble(),
+      workRadiusKm:
+          (json['work_radius_km'] as num?)?.toDouble() ?? defaultRadiusKm,
     );
   }
 
@@ -74,6 +90,9 @@ class DriverProfileDto {
   final String photoUrl;
   final bool onboardingCompleted;
   final bool isOnline;
+  final double? workCenterLatitude;
+  final double? workCenterLongitude;
+  final double workRadiusKm;
 
   DriverProfile toEntity() {
     return DriverProfile(
@@ -85,6 +104,9 @@ class DriverProfileDto {
       photoUrl: photoUrl,
       onboardingCompleted: onboardingCompleted,
       isOnline: isOnline,
+      workCenterLatitude: workCenterLatitude,
+      workCenterLongitude: workCenterLongitude,
+      workRadiusKm: workRadiusKm,
     );
   }
 }

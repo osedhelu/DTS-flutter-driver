@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/constants/location_radius_constants.dart';
+
 class DriverProfile extends Equatable {
   const DriverProfile({
     required this.fullName,
@@ -10,6 +12,9 @@ class DriverProfile extends Equatable {
     required this.photoUrl,
     required this.onboardingCompleted,
     required this.isOnline,
+    this.workCenterLatitude,
+    this.workCenterLongitude,
+    this.workRadiusKm = defaultRadiusKm,
   });
 
   final String fullName;
@@ -20,6 +25,12 @@ class DriverProfile extends Equatable {
   final String photoUrl;
   final bool onboardingCompleted;
   final bool isOnline;
+  final double? workCenterLatitude;
+  final double? workCenterLongitude;
+  final double workRadiusKm;
+
+  bool get hasWorkCenter =>
+      workCenterLatitude != null && workCenterLongitude != null;
 
   @override
   List<Object?> get props => [
@@ -31,5 +42,8 @@ class DriverProfile extends Equatable {
         photoUrl,
         onboardingCompleted,
         isOnline,
+        workCenterLatitude,
+        workCenterLongitude,
+        workRadiusKm,
       ];
 }

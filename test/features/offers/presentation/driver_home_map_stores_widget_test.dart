@@ -102,6 +102,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('2 comercios en el mapa'), findsOneWidget);
+    expect(find.byKey(const Key('driver_work_zone_chip')), findsOneWidget);
     expect(find.byKey(const Key('show_stores_switch')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('show_stores_switch')));
