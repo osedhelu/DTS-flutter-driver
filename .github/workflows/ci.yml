@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, master]
+  pull_request:
+    branches: [main, develop, master]
+
+concurrency:
+  group: flutter-driver-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Realtime smoke (WS URI + offers refresh)
+        run: >
+          flutter test
+          test/core/config/env_ws_uri_test.dart
+          test/features/offers/
+
+      - name: Full test suite
+        run: flutter test

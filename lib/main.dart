@@ -88,6 +88,13 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
       ref.read(connectivityOfflineProvider.notifier).state = offline;
     });
 
+    // Push/FCM solo en móvil. En Chrome/web no hay app Firebase web
+    // configurada y FirebaseMessaging.instance falla.
+    if (kIsWeb) {
+      debugPrint('FCM omitido: plataforma web no soportada en DTS Driver.');
+      return;
+    }
+
     try {
       final messaging = ref.read(firebaseMessagingServiceProvider);
       await messaging.initialize();
@@ -101,7 +108,7 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
       }
 
       final auth = await ref.read(authStateProvider.future);
-      if (auth && !kIsWeb) {
+      if (auth) {
         _fcmRegistration = DriverFcmRegistration(
           authRepository: ref.read(authRepositoryProvider),
         );
@@ -156,6 +163,8 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
           body: 'Tienes un pedido cercano #$id',
         ),
       );
+      // A5: refrescar home / ofertas además del deep link.
+      ref.read(offersRefreshTickProvider.notifier).state++;
       unawaited(_openOffer(id));
     });
 

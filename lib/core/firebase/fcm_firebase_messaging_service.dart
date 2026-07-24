@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +14,9 @@ class FcmFirebaseMessagingService implements FirebaseMessagingService {
   final _openedController = StreamController<PushMessage>.broadcast();
   StreamSubscription<RemoteMessage>? _sub;
   StreamSubscription<RemoteMessage>? _openedSub;
+
+  bool get _isIos =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   Stream<PushMessage> get onMessage => _controller.stream;
@@ -46,7 +48,7 @@ class FcmFirebaseMessagingService implements FirebaseMessagingService {
   Future<void> _logFcmTokenSafely() async {
     if (!kDebugMode) return;
     try {
-      if (!kIsWeb && Platform.isIOS) {
+      if (_isIos) {
         String? apns;
         for (var i = 0; i < 10; i++) {
           apns = await _messaging.getAPNSToken();
@@ -72,7 +74,7 @@ class FcmFirebaseMessagingService implements FirebaseMessagingService {
   /// Token FCM listo para registrar en el backend (null si APNS aún no listo).
   Future<String?> getFcmToken() async {
     try {
-      if (!kIsWeb && Platform.isIOS) {
+      if (_isIos) {
         final apns = await _messaging.getAPNSToken();
         if (apns == null) return null;
       }

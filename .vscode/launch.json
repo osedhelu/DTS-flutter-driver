@@ -1,14 +1,29 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "flutter-driver (Flutter)",
+            "name": "flutter-driver (Android)",
             "program": "lib/main.dart",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "deviceId": "android"
+        },
+        {
+            "name": "flutter-driver (iOS)",
+            "program": "lib/main.dart",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "ios"
+        },
+        {
+            "name": "flutter-driver (Chrome — solo UI)",
+            "program": "lib/main.dart",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "chrome",
+            "toolArgs": [
+                "--web-browser-flag=--disable-web-security"
+            ]
         }
     ]
 }

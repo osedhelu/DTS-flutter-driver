@@ -127,7 +127,7 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
           _messages.add(msg);
         }
       });
-      _channel?.sink.add(jsonEncode({'type': 'message', 'body': text}));
+      // REST source of truth; backend fan-out por WS.
       _scrollToEnd();
     } catch (_) {
       if (!mounted) return;
@@ -150,7 +150,7 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
                     ? const DtsEmptyState(
                         icon: Icons.chat_bubble_outline,
                         title: 'Sin mensajes',
-                        message: 'Escribe al cliente para coordinar la entrega.',
+                        message: 'Escribe al cliente o al comercio.',
                       )
                     : ListView.builder(
                         controller: _scroll,

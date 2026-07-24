@@ -202,6 +202,10 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         (order?.status == 'driver_assigned' || order?.status == 'picked_up')
             ? pickup
             : dropoff;
+    final needsDropoff = order?.status == 'on_the_way' ||
+        order?.status == 'picked_up' ||
+        order?.status == 'delivered';
+    final missingCustomerLocation = needsDropoff && dropoff == null;
 
     return Scaffold(
       appBar: AppBar(
@@ -270,6 +274,16 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                                 Text(
                                   order!.deliveryAddress,
                                   style: theme.textTheme.bodySmall,
+                                ),
+                              if (missingCustomerLocation)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    'Sin ubicación GPS del cliente. Usa la dirección o contacta al cliente.',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.error,
+                                    ),
+                                  ),
                                 ),
                               if (order?.customerNotes.isNotEmpty == true)
                                 Text(

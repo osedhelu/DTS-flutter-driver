@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,7 +26,8 @@ class DriverHomeMapScreen extends ConsumerStatefulWidget {
       _DriverHomeMapScreenState();
 }
 
-class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
+class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
+    with WidgetsBindingObserver {
   List<DriverOffer> _offers = [];
   List<DriverOrder> _activeOrders = [];
   List<Store> _stores = [];
@@ -42,11 +45,32 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
   double _workRadiusKm = defaultRadiusKm;
   int? _actionOrderId;
   GoogleMapController? _mapController;
+  Timer? _offersPoll;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bootstrap();
+    _offersPoll = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (_isOnline && mounted) {
+        unawaited(_loadOffers(silent: true));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _offersPoll?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isOnline) {
+      unawaited(_loadOffers(silent: true));
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -141,27 +165,29 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
     }
   }
 
-  Future<void> _loadOffers() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  Future<void> _loadOffers({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
       final offers = await ref.read(listDriverOffersUseCaseProvider).call();
       if (!mounted) return;
       setState(() {
         _offers = offers;
         _isLoading = false;
+        _error = null;
       });
-      if (offers.length == 1 && _isOnline) {
-        // Auto-present first urgent offer when only one arrives
-      }
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _error = 'No se pudieron cargar las ofertas';
-        _isLoading = false;
-      });
+      if (!silent) {
+        setState(() {
+          _error = 'No se pudieron cargar las ofertas';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -238,6 +264,11 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(offersRefreshTickProvider, (prev, next) {
+      if (prev != next && _isOnline) {
+        unawaited(_loadOffers(silent: true));
+      }
+    });
     final theme = Theme.of(context);
     final center = (_lat != null && _lng != null)
         ? LatLng(_lat!, _lng!)

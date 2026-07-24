@@ -227,6 +227,9 @@ final listDriverOffersUseCaseProvider =
   return ListDriverOffersUseCase(ref.watch(driverOfferRepositoryProvider));
 });
 
+/// Incrementado desde push FCM para forzar refresh de ofertas (A5).
+final offersRefreshTickProvider = StateProvider<int>((ref) => 0);
+
 final acceptDriverOfferUseCaseProvider =
     Provider<AcceptDriverOfferUseCase>((ref) {
   return AcceptDriverOfferUseCase(ref.watch(driverOfferRepositoryProvider));
