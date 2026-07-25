@@ -77,21 +77,23 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   Future<void> _completeWithProof() async {
     final picker = ImagePicker();
     final file = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (file == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes tomar la foto de entrega')),
+      );
+      return;
+    }
     setState(() => _updating = true);
     try {
-      if (file != null) {
-        final dio = ref.read(apiClientProvider).dio;
-        final form = FormData.fromMap({
-          'photo': await MultipartFile.fromFile(file.path),
-        });
-        await dio.post(
-          '/orders/${widget.orderId}/proof-of-delivery/',
-          data: form,
-        );
-      } else {
-        await _updateStatus('delivered');
-        return;
-      }
+      final dio = ref.read(apiClientProvider).dio;
+      final form = FormData.fromMap({
+        'photo': await MultipartFile.fromFile(file.path),
+      });
+      await dio.post(
+        '/orders/${widget.orderId}/proof-of-delivery/',
+        data: form,
+      );
       if (!mounted) return;
       await _finishDeliveryTracking();
       context.go('/orders');
