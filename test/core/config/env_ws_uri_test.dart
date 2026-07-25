@@ -14,7 +14,7 @@ void main() {
 
   test('normalizeWsUri corrige port 0', () {
     final raw = Uri.parse(
-      'wss://dts-backend-production-c84e.up.railway.app/ws/orders/1/chat/?token=x',
+      'wss://api.dtsdrop.com/ws/orders/1/chat/?token=x',
     );
     expect(raw.port, 0);
     final fixed = EnvConfig.normalizeWsUri(raw);
