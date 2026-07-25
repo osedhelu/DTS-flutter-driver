@@ -23,17 +23,38 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
   final _scroll = ScrollController();
   final _messages = <Map<String, dynamic>>[];
   bool _loading = true;
+  bool _sending = false;
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
+  Timer? _poll;
+
+  bool _sameId(dynamic a, dynamic b) {
+    if (a == null || b == null) return false;
+    return a.toString() == b.toString();
+  }
+
+  void _upsert(Map<String, dynamic> msg) {
+    final id = msg['id'];
+    final idx = _messages.indexWhere((m) => _sameId(m['id'], id));
+    if (idx >= 0) {
+      _messages[idx] = msg;
+    } else {
+      _messages.add(msg);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _bootstrap();
+    _poll = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted) unawaited(_loadHistory(silent: true));
+    });
   }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _sub?.cancel();
     _channel?.sink.close();
     _controller.dispose();
@@ -46,22 +67,23 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
     await _connectWs();
   }
 
-  Future<void> _loadHistory() async {
+  Future<void> _loadHistory({bool silent = false}) async {
     try {
       final dio = ref.read(apiClientProvider).dio;
       final res = await dio.get('/orders/${widget.orderId}/messages/');
       final list = (res.data as List).cast<dynamic>();
       if (!mounted) return;
       setState(() {
-        _messages
-          ..clear()
-          ..addAll(list.map((e) => Map<String, dynamic>.from(e as Map)));
+        if (!silent) _messages.clear();
+        for (final e in list) {
+          _upsert(Map<String, dynamic>.from(e as Map));
+        }
         _loading = false;
       });
-      _scrollToEnd();
+      if (!silent) _scrollToEnd();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      if (!silent) setState(() => _loading = false);
     }
   }
 
@@ -86,9 +108,7 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
             final data = jsonDecode(event as String) as Map<String, dynamic>;
             if (data['type'] == 'message' || data.containsKey('body')) {
               if (!mounted) return;
-              final id = data['id'];
-              if (id != null && _messages.any((m) => m['id'] == id)) return;
-              setState(() => _messages.add(data));
+              setState(() => _upsert(data));
               _scrollToEnd();
             }
           } catch (_) {}
@@ -112,7 +132,8 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
 
   Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
     try {
       final dio = ref.read(apiClientProvider).dio;
       final res = await dio.post(
@@ -122,18 +143,15 @@ class _OrderChatScreenState extends ConsumerState<OrderChatScreen> {
       _controller.clear();
       if (!mounted) return;
       final msg = Map<String, dynamic>.from(res.data as Map);
-      setState(() {
-        if (!_messages.any((m) => m['id'] == msg['id'])) {
-          _messages.add(msg);
-        }
-      });
-      // REST source of truth; backend fan-out por WS.
+      setState(() => _upsert(msg));
       _scrollToEnd();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo enviar el mensaje')),
       );
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 

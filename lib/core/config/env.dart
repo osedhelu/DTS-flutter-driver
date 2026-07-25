@@ -1,6 +1,5 @@
 abstract final class EnvConfig {
-  static const apiBaseUrl =
-      'https://dts-backend-production-c84e.up.railway.app/api/v1';
+  static const apiBaseUrl = 'https://api.dtsdrop.com/api/v1';
 
   /// Origen WebSocket (sin `/api/v1`). Derivado de [apiBaseUrl].
   ///
