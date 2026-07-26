@@ -44,7 +44,7 @@ void main() {
     await datasource.connect(orderId: 55, accessToken: 'driver-jwt');
     expect(
       connectedUri.toString(),
-      'wss://example.test/ws/orders/55/tracking/?token=driver-jwt',
+      'wss://example.test:443/ws/orders/55/tracking/?token=driver-jwt',
     );
     expect(datasource.connectedOrderId, 55);
 
@@ -70,9 +70,6 @@ void main() {
   });
 
   test('env_ws_base_url_from_api', () {
-    expect(
-      EnvConfig.wsBaseUrl,
-      'wss://dts-backend-production-c84e.up.railway.app',
-    );
+    expect(EnvConfig.wsBaseUrl, 'wss://api.dtsdrop.com');
   });
 }
