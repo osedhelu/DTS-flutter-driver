@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('A5 readyTypes incluye searching_driver y dispara callback', () {
-    final handler = NewOrderNotificationHandler();
+    const handler = NewOrderNotificationHandler();
     int? received;
     handler.handleMessage(
       const RemotePushMessage(

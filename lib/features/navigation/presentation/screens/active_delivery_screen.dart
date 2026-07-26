@@ -96,6 +96,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       );
       if (!mounted) return;
       await _finishDeliveryTracking();
+      if (!mounted) return;
       context.go('/orders');
     } catch (e) {
       if (!mounted) return;
@@ -118,6 +119,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       setState(() => _order = updated);
       if (status == 'delivered') {
         await _finishDeliveryTracking();
+        if (!mounted) return;
         context.go('/orders');
       }
     } catch (e) {

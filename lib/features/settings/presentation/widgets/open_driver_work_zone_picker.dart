@@ -13,6 +13,7 @@ Future<DriverProfile?> openDriverWorkZonePicker(
   DriverProfile? profile,
 }) async {
   profile ??= await ref.read(getDriverProfileUseCaseProvider).call();
+  if (!context.mounted) return null;
 
   final result = await LocationRadiusPicker.show(
     context,
