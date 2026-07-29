@@ -1,3 +1,4 @@
+export 'dts_brand_logo.dart';
 export 'dts_empty_state.dart';
 export 'dts_error_view.dart';
 export 'dts_loading.dart';

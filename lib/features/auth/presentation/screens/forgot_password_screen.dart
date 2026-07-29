@@ -68,6 +68,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Center(child: DtsBrandLogo(size: 88)),
+                  const SizedBox(height: 20),
                   Text(
                     'Te enviaremos un enlace para crear una nueva contraseña.',
                     style: Theme.of(context).textTheme.bodyLarge,

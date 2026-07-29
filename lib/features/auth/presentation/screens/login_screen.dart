@@ -301,26 +301,8 @@ class _LoginHeroHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppTheme.accent,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.delivery_dining,
-              size: 36,
-              color: AppTheme.seed,
-            ),
-          ),
+          // Header verde: forzar logo oscuro (cobre sobre negro) para contraste.
+          const DtsBrandLogo(size: 88, forceDark: true),
           const SizedBox(height: 14),
           Text(
             'DTS Conductor',

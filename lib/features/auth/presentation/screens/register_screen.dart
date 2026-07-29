@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/widgets/widgets.dart';
 import '../../application/post_auth_service.dart';
 import '../../domain/usecases/register_driver_usecase.dart';
 
@@ -69,6 +70,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           key: _formKey,
           child: ListView(
             children: [
+              const Center(child: DtsBrandLogo(size: 96)),
+              const SizedBox(height: 24),
               TextFormField(
                 key: const Key('register_username'),
                 controller: _usernameController,
