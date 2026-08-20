@@ -17,6 +17,7 @@ import 'core/router/app_router.dart';
 import 'core/router/incoming_offer_navigation.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/widgets.dart';
+import 'features/location/infrastructure/background/background_tracking_service.dart';
 import 'features/notifications/domain/handlers/new_order_notification_handler.dart';
 import 'firebase_options.dart';
 
@@ -36,6 +37,10 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
+
+  if (!kIsWeb) {
+    await configureBackgroundTracking();
   }
 
   runApp(const ProviderScope(child: DtsDriverApp()));

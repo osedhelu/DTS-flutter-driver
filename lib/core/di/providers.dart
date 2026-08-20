@@ -29,6 +29,10 @@ import '../../features/location/infrastructure/datasources/driver_tracking_ws_da
 import '../../features/location/infrastructure/datasources/location_tracking_remote_datasource.dart';
 import '../../features/location/infrastructure/repositories/location_tracking_repository_impl.dart';
 import '../../features/location/application/services/location_service.dart';
+import '../../features/navigation/domain/repositories/route_repository.dart';
+import '../../features/navigation/application/usecases/get_route_usecase.dart';
+import '../../features/navigation/infrastructure/datasources/route_remote_datasource.dart';
+import '../../features/navigation/infrastructure/repositories/route_repository_impl.dart';
 import '../../features/profile/domain/repositories/driver_profile_repository.dart';
 import '../../features/profile/domain/usecases/get_driver_profile_usecase.dart';
 import '../../features/profile/domain/usecases/update_driver_profile_usecase.dart';
@@ -176,6 +180,18 @@ final locationServiceProvider = Provider<LocationService>((ref) {
     sendLocationUseCase: ref.watch(sendLocationUseCaseProvider),
     geolocatorService: ref.watch(geolocatorServiceProvider),
   );
+});
+
+final routeRemoteDataSourceProvider = Provider<RouteRemoteDataSource>((ref) {
+  return RouteRemoteDataSource(ref.watch(apiClientProvider).dio);
+});
+
+final routeRepositoryProvider = Provider<RouteRepository>((ref) {
+  return RouteRepositoryImpl(ref.watch(routeRemoteDataSourceProvider));
+});
+
+final getRouteUseCaseProvider = Provider<GetRouteUseCase>((ref) {
+  return GetRouteUseCase(ref.watch(routeRepositoryProvider));
 });
 
 final driverProfileRemoteDataSourceProvider =

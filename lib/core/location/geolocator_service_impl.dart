@@ -19,6 +19,23 @@ class GeolocatorServiceImpl implements GeolocatorService {
   }
 
   @override
+  Stream<GeoPosition> getPositionStream({
+    Duration interval = const Duration(seconds: 10),
+  }) {
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).map(
+      (position) => GeoPosition(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      ),
+    );
+  }
+
+  @override
   Future<bool> isPermissionGranted() async {
     final permission = await Geolocator.checkPermission();
     return permission == LocationPermission.always ||

@@ -3,14 +3,17 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart' hide RouteData;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/di/providers.dart';
+import '../../../../core/location/geolocator_service.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../location/infrastructure/background/background_tracking_service.dart';
 import '../../../orders/domain/entities/driver_order.dart';
+import '../../domain/entities/route_data.dart';
 
 class ActiveDeliveryScreen extends ConsumerStatefulWidget {
   const ActiveDeliveryScreen({super.key, required this.orderId});
@@ -29,6 +32,8 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   bool _loading = true;
   String? _error;
   bool _updating = false;
+  RouteData? _route;
+  StreamSubscription<GeoPosition>? _gpsSub;
 
   @override
   void initState() {
@@ -36,10 +41,17 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     _bootstrap();
   }
 
+  @override
+  void dispose() {
+    _gpsSub?.cancel();
+    super.dispose();
+  }
+
   Future<void> _bootstrap() async {
     try {
-      final order =
-          await ref.read(driverOrderRepositoryProvider).getOrder(widget.orderId);
+      final order = await ref
+          .read(driverOrderRepositoryProvider)
+          .getOrder(widget.orderId);
       final geo = ref.read(geolocatorServiceProvider);
       final granted =
           await geo.isPermissionGranted() || await geo.requestPermission();
@@ -47,14 +59,24 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         final pos = await geo.getCurrentPosition();
         _lat = pos.latitude;
         _lng = pos.longitude;
+        _gpsSub = geo.getPositionStream().listen((position) {
+          if (!mounted) return;
+          setState(() {
+            _lat = position.latitude;
+            _lng = position.longitude;
+          });
+        });
       }
       ref.read(locationServiceProvider).start(isOnline: true);
-      unawaited(ref.read(localNotificationServiceProvider).showTrackingActive());
+      unawaited(
+          ref.read(localNotificationServiceProvider).showTrackingActive());
+      unawaited(startBackgroundTracking(orderId: widget.orderId));
       if (!mounted) return;
       setState(() {
         _order = order;
         _loading = false;
       });
+      unawaited(_loadRoute());
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -64,8 +86,36 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     }
   }
 
+  Future<void> _loadRoute() async {
+    final lat = _lat;
+    final lng = _lng;
+    final order = _order;
+    if (lat == null || lng == null || order == null) return;
+
+    final trackable = order.status == 'driver_assigned' ||
+        order.status == 'picked_up' ||
+        order.status == 'on_the_way';
+    if (!trackable) {
+      if (mounted) setState(() => _route = null);
+      return;
+    }
+
+    try {
+      final route = await ref.read(getRouteUseCaseProvider).call(
+            orderId: widget.orderId,
+            latitude: lat,
+            longitude: lng,
+          );
+      if (!mounted) return;
+      setState(() => _route = route);
+    } catch (_) {
+      // Degradación graciosa: markers sin polyline real.
+    }
+  }
+
   Future<void> _finishDeliveryTracking() async {
     unawaited(ref.read(localNotificationServiceProvider).cancelTracking());
+    unawaited(stopBackgroundTracking());
     try {
       final profile = await ref.read(getDriverProfileUseCaseProvider).call();
       ref.read(locationServiceProvider).start(isOnline: profile.isOnline);
@@ -76,7 +126,8 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
 
   Future<void> _completeWithProof() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    final file =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
     if (file == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,12 +162,14 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   Future<void> _updateStatus(String status) async {
     setState(() => _updating = true);
     try {
-      final updated = await ref.read(driverOrderRepositoryProvider).updateStatus(
-            orderId: widget.orderId,
-            status: status,
-          );
+      final updated =
+          await ref.read(driverOrderRepositoryProvider).updateStatus(
+                orderId: widget.orderId,
+                status: status,
+              );
       if (!mounted) return;
       setState(() => _order = updated);
+      unawaited(_loadRoute());
       if (status == 'delivered') {
         await _finishDeliveryTracking();
         if (!mounted) return;
@@ -156,9 +209,10 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         ? LatLng(_lat!, _lng!)
         : const LatLng(4.711, -74.072);
 
-    final pickup = (order?.storeLatitude != null && order?.storeLongitude != null)
-        ? LatLng(order!.storeLatitude!, order.storeLongitude!)
-        : null;
+    final pickup =
+        (order?.storeLatitude != null && order?.storeLongitude != null)
+            ? LatLng(order!.storeLatitude!, order.storeLongitude!)
+            : null;
     final dropoff =
         (order?.deliveryLatitude != null && order?.deliveryLongitude != null)
             ? LatLng(order!.deliveryLatitude!, order.deliveryLongitude!)
@@ -179,19 +233,32 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
             title: 'Recoger',
             snippet: order?.storeName ?? '',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
         ),
       if (dropoff != null)
         Marker(
           markerId: const MarkerId('dropoff'),
           position: dropoff,
           infoWindow: const InfoWindow(title: 'Entregar'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ),
     };
 
     final polylines = <Polyline>{};
-    if (pickup != null && dropoff != null) {
+    final routePoints = _route?.polyline ?? const <LatLng>[];
+    if (routePoints.length > 1) {
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: routePoints,
+          color: theme.colorScheme.primary,
+          width: 5,
+        ),
+      );
+    } else if (pickup != null && dropoff != null) {
+      // Fallback: línea recta conductor → recoger → entregar (sin proveedor).
       polylines.add(
         Polyline(
           polylineId: const PolylineId('route'),
@@ -237,6 +304,24 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                               tone: DtsStatusChip.toneForStatus(order.status),
                             ),
                             const Spacer(),
+                            if (_route != null && _route!.etaMinutes > 0) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '~ ${_route!.etaMinutes} min',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.onPrimaryContainer,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
                             if (order.driverEarning.isNotEmpty)
                               Text(
                                 'Ganas \$${order.driverEarning}',

@@ -12,4 +12,7 @@ abstract class GeolocatorService {
   Future<bool> isPermissionGranted();
   Future<bool> requestPermission();
   Future<GeoPosition> getCurrentPosition();
+  Stream<GeoPosition> getPositionStream({
+    Duration interval = const Duration(seconds: 10),
+  });
 }
