@@ -17,8 +17,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     defaultConfig {
@@ -32,11 +34,21 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("DTS_RELEASE_KEYSTORE")?.let { file(it) }
+                ?: file(System.getProperty("user.home")).resolve("dts_release.jks")
+            
+            storeFile = keystorePath
+            storePassword = System.getenv("DTS_RELEASE_KEYSTORE_PASSWORD") ?: "dtsapp2024"
+            keyAlias = "release"
+            keyPassword = System.getenv("DTS_RELEASE_KEY_PASSWORD") ?: "dtsapp2024"
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

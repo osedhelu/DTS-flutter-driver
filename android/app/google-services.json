@@ -7,6 +7,66 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1015036938407:android:987797af4288c33c08b382",
+        "android_client_info": {
+          "package_name": "com.osedhelu.dts"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1015036938407-1gsf2sa555i3m6vkjp80gq047jifutd5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.osedhelu.dts",
+            "certificate_hash": "69f247b9d146aa5268ac8c6e863bcf14a853ffa4"
+          }
+        },
+        {
+          "client_id": "1015036938407-fofhfdt4i551bpb570te67i08aqmf2p6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.osedhelu.dts",
+            "certificate_hash": "2ed6518290753f7d1c6ad7882e1f63e9bf0e4e67"
+          }
+        },
+        {
+          "client_id": "1015036938407-jmjcq9576ieptc5v2orv8043qscer8h4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.osedhelu.dts",
+            "certificate_hash": "ba3c04fad06dce542d803aaa8b8dcaa0d022915d"
+          }
+        },
+        {
+          "client_id": "1015036938407-3b42tv87mauud225f3vfett7c5rtogof.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBj-DmYwHfG6kvSKoCF-kqC4tvt3v9pQBI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1015036938407-3b42tv87mauud225f3vfett7c5rtogof.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1015036938407-5sv7g0c6ujt98g2imkq3u6qlddolij9s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.osedhelu.dts"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1015036938407:android:041cc4084dd2a93008b382",
         "android_client_info": {
           "package_name": "com.osedhelu.dtsdriver"
@@ -19,6 +79,14 @@
           "android_info": {
             "package_name": "com.osedhelu.dtsdriver",
             "certificate_hash": "69f247b9d146aa5268ac8c6e863bcf14a853ffa4"
+          }
+        },
+        {
+          "client_id": "1015036938407-sk6ujgs2imm61resivhmlmpl4ku6ue16.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.osedhelu.dtsdriver",
+            "certificate_hash": "aa4df0b8df3de533188ad4d5d5bec021cb4a61ec"
           }
         },
         {
