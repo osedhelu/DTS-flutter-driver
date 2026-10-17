@@ -1,4 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../../../../core/utils/polyline_decoder.dart';
 
 /// Tipo de oferta del feed unificado de conductores.
 enum OfferType { delivery, ride }
@@ -25,6 +28,7 @@ class DriverOffer extends Equatable {
     this.dropoffLatitude,
     this.dropoffLongitude,
     this.estimatedDurationMinutes,
+    this.encodedPolyline,
   });
 
   final int orderId;
@@ -46,6 +50,10 @@ class DriverOffer extends Equatable {
   final double? dropoffLongitude;
   final int? estimatedDurationMinutes;
 
+  /// Geometría comprimida (polilínea de Google) de la ruta real Pickup →
+  /// Dropoff de la oferta de viaje. `null` si el backend no pudo calcularla.
+  final String? encodedPolyline;
+
   bool get isRide => offerType == OfferType.ride;
 
   bool get isDelivery => offerType == OfferType.delivery;
@@ -54,6 +62,13 @@ class DriverOffer extends Equatable {
   bool get hasMapPosition =>
       (storeLatitude != null && storeLongitude != null) ||
       (pickupLatitude != null && pickupLongitude != null);
+
+  /// Puntos decodificados de la ruta real sobre calles (vacío si no hay).
+  List<LatLng> get routePoints {
+    final encoded = encodedPolyline;
+    if (encoded == null || encoded.isEmpty) return const [];
+    return decodePolyline(encoded);
+  }
 
   @override
   List<Object?> get props => [
@@ -73,5 +88,6 @@ class DriverOffer extends Equatable {
         dropoffLatitude,
         dropoffLongitude,
         estimatedDurationMinutes,
+        encodedPolyline,
       ];
 }

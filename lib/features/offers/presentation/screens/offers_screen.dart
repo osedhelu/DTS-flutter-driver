@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/providers.dart';
 import '../../../../core/router/active_delivery_navigation.dart';
+import '../../../../core/widgets/widgets.dart';
 import '../../domain/entities/driver_offer.dart';
+import '../widgets/driver_offer_card.dart';
 import 'driver_home_map_screen.dart';
 
 class OffersScreen extends ConsumerStatefulWidget {
@@ -156,19 +158,60 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
       ),
       body: Column(
         children: [
-          SwitchListTile(
-            key: const Key('availability_switch'),
-            title: const Text('En línea'),
-            subtitle: Text(
-              _isOnline
-                  ? 'Recibiendo ofertas cercanas'
-                  : 'Actívate para recibir pedidos',
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    DtsStatusDot(online: _isOnline),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isOnline ? 'En línea' : 'Desconectado',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _isOnline
+                                ? 'Recibiendo ofertas cercanas'
+                                : 'Actívate para recibir pedidos',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_toggling)
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      )
+                    else
+                      Switch(
+                        key: const Key('availability_switch'),
+                        value: _isOnline,
+                        onChanged: _toggleOnline,
+                      ),
+                  ],
+                ),
+              ),
             ),
-            value: _isOnline,
-            onChanged: _toggling ? null : _toggleOnline,
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: SegmentedButton<OfferFilter>(
               key: const Key('offer_filter'),
               showSelectedIcon: false,
@@ -193,7 +236,6 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
               },
             ),
           ),
-          const Divider(height: 1),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadOffers,
@@ -241,13 +283,12 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       itemCount: filteredOffers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final offer = filteredOffers[index];
-        return _OfferCard(
-          key: Key('offer_card_${offer.orderId}'),
+        return DriverOfferCard(
           offer: offer,
           isLoading: _actionOrderId == offer.orderId,
           onAccept: () => _accept(offer),
@@ -291,120 +332,6 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
           ),
         );
       },
-    );
-  }
-}
-
-class _OfferCard extends StatelessWidget {
-  const _OfferCard({
-    super.key,
-    required this.offer,
-    required this.isLoading,
-    required this.onAccept,
-    required this.onReject,
-  });
-
-  final DriverOffer offer;
-  final bool isLoading;
-  final VoidCallback onAccept;
-  final VoidCallback onReject;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isRide = offer.isRide;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.secondaryContainer,
-                  child: Icon(
-                    isRide ? Icons.directions_car_outlined : Icons.storefront,
-                    color: theme.colorScheme.onSecondaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isRide
-                            ? 'Viaje #${offer.orderId}'
-                            : offer.storeName.isEmpty
-                                ? 'Pedido #${offer.orderId}'
-                                : offer.storeName,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        '${offer.distanceKm.toStringAsFixed(1)} km · \$${offer.total}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Chip(label: Text(offer.status)),
-              ],
-            ),
-            if (isRide) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${offer.pickupAddress.isEmpty ? 'Recogida' : offer.pickupAddress}'
-                ' → '
-                '${offer.dropoffAddress.isEmpty ? 'Destino' : offer.dropoffAddress}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              if (offer.estimatedDurationMinutes != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  '~ ${offer.estimatedDurationMinutes} min estimados',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
-            const SizedBox(height: 16),
-            if (isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      key: Key('offer_reject_${offer.orderId}'),
-                      onPressed: onReject,
-                      child: const Text('Rechazar'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      key: Key('offer_accept_${offer.orderId}'),
-                      onPressed: onAccept,
-                      child: Text(isRide ? 'Aceptar viaje' : 'Aceptar'),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
     );
   }
 }

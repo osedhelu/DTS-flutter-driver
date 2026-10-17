@@ -15,6 +15,7 @@ import '../../../stores/domain/entities/store.dart';
 import '../../../stores/presentation/widgets/store_info_sheet.dart';
 import '../../domain/entities/driver_offer.dart';
 import '../utils/driver_home_map_markers.dart';
+import '../widgets/driver_offer_card.dart';
 import 'incoming_offer_screen.dart';
 
 /// Home estilo Uber: mapa + sheet de ofertas + toggle online.
@@ -376,8 +377,21 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                     child: ActionChip(
                       key: const Key('driver_work_zone_chip'),
                       avatar: const Icon(Icons.radar_outlined, size: 18),
-                      label: Text(workZoneLabel),
+                      label: Text(
+                        workZoneLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                       onPressed: _openWorkZonePicker,
+                      backgroundColor:
+                          theme.colorScheme.surface.withValues(alpha: 0.92),
+                      side: BorderSide(
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                      elevation: 1,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                     ),
                   ),
                 ),
@@ -385,49 +399,46 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Card(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Row(
                             children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _isOnline
-                                      ? Colors.green
-                                      : theme.colorScheme.outline,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
+                              DtsStatusDot(online: _isOnline),
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       _isOnline ? 'En línea' : 'Desconectado',
-                                      style: theme.textTheme.titleSmall,
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
                                       _isOnline
                                           ? 'Recibiendo ofertas cercanas'
                                           : 'Actívate para ganar',
-                                      style: theme.textTheme.bodySmall,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               if (_toggling)
                                 const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  width: 28,
+                                  height: 28,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                  ),
                                 )
                               else
                                 Switch(
@@ -437,26 +448,43 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                                 ),
                             ],
                           ),
-                          const Divider(height: 16),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            child: Divider(height: 1),
+                          ),
                           Row(
                             children: [
-                              Icon(
-                                Icons.storefront_outlined,
-                                size: 18,
-                                color: theme.colorScheme.outline,
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: theme
+                                      .colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.storefront_outlined,
+                                  size: 20,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   _storesLoading
                                       ? 'Cargando comercios…'
                                       : '${_stores.length} comercios en el mapa',
-                                  style: theme.textTheme.bodySmall,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                               Text(
                                 'Mostrar',
-                                style: theme.textTheme.bodySmall,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                               Switch(
                                 key: const Key('show_stores_switch'),
@@ -480,27 +508,30 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
             maxChildSize: 0.72,
             builder: (context, scrollController) {
               return Material(
-                elevation: 8,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                elevation: 12,
+                shadowColor: Colors.black.withValues(alpha: 0.16),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
                 color: theme.colorScheme.surface,
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Container(
-                      width: 40,
-                      height: 4,
+                      width: 44,
+                      height: 5,
                       decoration: BoxDecoration(
                         color: theme.colorScheme.outlineVariant,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
                       child: DtsSectionHeader(
                         title: 'Ofertas',
                         subtitle: _isOnline
-                            ? '${filteredOffers.length} disponibles'
+                            ? '${filteredOffers.length} disponibles cerca'
                             : 'Ponte en línea',
                         trailing: IconButton(
                           icon: const Icon(Icons.refresh),
@@ -516,7 +547,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                       child: SegmentedButton<OfferFilter>(
                         key: const Key('offer_filter'),
                         showSelectedIcon: false,
@@ -569,6 +600,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
   }
 
   Widget _buildSheetBody(ScrollController scrollController) {
+    final theme = Theme.of(context);
     if (_isLoading) {
       return ListView(
         controller: scrollController,
@@ -600,7 +632,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
     if (_activeOrders.isNotEmpty) {
       children.addAll([
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: DtsSectionHeader(
             title: 'Entregas activas',
             subtitle: '${_activeOrders.length} en curso',
@@ -608,16 +640,30 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
         ),
         ..._activeOrders.map(
           (order) => Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
             child: Card(
               child: ListTile(
-                leading: Icon(
-                  order.isRide
-                      ? Icons.directions_car_outlined
-                      : Icons.local_shipping_outlined,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer
+                        .withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    order.isRide
+                        ? Icons.directions_car_outlined
+                        : Icons.local_shipping_outlined,
+                    size: 22,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
                 ),
                 title: Text(
                   order.isRide ? 'Viaje #${order.id}' : 'Pedido #${order.id}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 subtitle: Text(
                   order.isRide
@@ -638,7 +684,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
             ),
           ),
         ),
-        const Divider(height: 24),
+        const Divider(height: 28),
       ]);
     }
 
@@ -674,7 +720,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
     children.addAll(
       filteredOffers.asMap().entries.map(
             (entry) => Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
               child: _buildOfferCard(entry.value),
             ),
           ),
@@ -688,176 +734,12 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
   }
 
   Widget _buildOfferCard(DriverOffer offer) {
-    final busy = _actionOrderId == offer.orderId;
-    return Card(
-      key: Key('offer_card_${offer.orderId}'),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _openOffer(offer),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.secondaryContainer,
-                    child: Icon(
-                      offer.isRide
-                          ? Icons.directions_car_outlined
-                          : Icons.storefront,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          offer.isRide
-                              ? 'Viaje #${offer.orderId}'
-                              : offer.storeName.isEmpty
-                                  ? 'Pedido #${offer.orderId}'
-                                  : offer.storeName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          '${offer.distanceKm.toStringAsFixed(1)} km · \$${offer.total}',
-                        ),
-                      ],
-                    ),
-                  ),
-                  DtsStatusChip(
-                    label: offer.status,
-                    tone: DtsStatusChip.toneForStatus(offer.status),
-                  ),
-                ],
-              ),
-              if (offer.isRide) ...[
-                const SizedBox(height: 12),
-                _RideOfferRoute(
-                  pickupAddress: offer.pickupAddress,
-                  dropoffAddress: offer.dropoffAddress,
-                  estimatedDurationMinutes: offer.estimatedDurationMinutes,
-                ),
-              ],
-              const SizedBox(height: 12),
-              if (busy)
-                const LinearProgressIndicator()
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        key: Key('offer_reject_${offer.orderId}'),
-                        onPressed: () => _reject(offer),
-                        child: const Text('Rechazar'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton(
-                        key: Key('offer_accept_${offer.orderId}'),
-                        onPressed: () => _accept(offer),
-                        child: Text(offer.isRide ? 'Aceptar viaje' : 'Aceptar'),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Detalle de ruta dentro de una tarjeta de oferta de viaje.
-class _RideOfferRoute extends StatelessWidget {
-  const _RideOfferRoute({
-    required this.pickupAddress,
-    required this.dropoffAddress,
-    this.estimatedDurationMinutes,
-  });
-
-  final String pickupAddress;
-  final String dropoffAddress;
-  final int? estimatedDurationMinutes;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _RouteLine(
-            icon: Icons.trip_origin,
-            color: theme.colorScheme.primary,
-            text: pickupAddress.isEmpty
-                ? 'Recogida sin dirección'
-                : pickupAddress,
-          ),
-          const SizedBox(height: 6),
-          _RouteLine(
-            icon: Icons.place_outlined,
-            color: Colors.green,
-            text: dropoffAddress.isEmpty
-                ? 'Destino sin dirección'
-                : dropoffAddress,
-          ),
-          if (estimatedDurationMinutes != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              '~ $estimatedDurationMinutes min estimados',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _RouteLine extends StatelessWidget {
-  const _RouteLine({
-    required this.icon,
-    required this.color,
-    required this.text,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ),
-      ],
+    return DriverOfferCard(
+      offer: offer,
+      isLoading: _actionOrderId == offer.orderId,
+      onTap: () => _openOffer(offer),
+      onAccept: () => _accept(offer),
+      onReject: () => _reject(offer),
     );
   }
 }

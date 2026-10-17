@@ -48,6 +48,7 @@ class RideDto {
     this.estimatedDurationMinutes,
     this.estimatedDistanceKm,
     this.paymentStatus = '',
+    this.encodedPolyline,
   });
 
   factory RideDto.fromJson(Map<String, dynamic> json) {
@@ -70,6 +71,7 @@ class RideDto {
           ? rawDistanceKm.toDouble()
           : double.tryParse('$rawDistanceKm'),
       paymentStatus: json['payment_status'] as String? ?? '',
+      encodedPolyline: json['encoded_polyline'] as String?,
     );
   }
 
@@ -98,6 +100,7 @@ class RideDto {
   final int? estimatedDurationMinutes;
   final double? estimatedDistanceKm;
   final String paymentStatus;
+  final String? encodedPolyline;
 
   Ride toEntity() {
     return Ride(
@@ -115,6 +118,7 @@ class RideDto {
       estimatedDurationMinutes: estimatedDurationMinutes,
       estimatedDistanceKm: estimatedDistanceKm,
       paymentStatus: paymentStatus,
+      encodedPolyline: encodedPolyline,
     );
   }
 }

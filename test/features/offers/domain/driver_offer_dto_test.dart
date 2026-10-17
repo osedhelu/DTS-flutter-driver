@@ -52,6 +52,7 @@ void main() {
         'dropoff_latitude': 4.72,
         'dropoff_longitude': -74.08,
         'estimated_duration_minutes': 17,
+        'encoded_polyline': 'wbw[rebcMfrJnrM',
       });
 
       final offer = dto.toEntity();
@@ -68,6 +69,9 @@ void main() {
       expect(offer.dropoffLatitude, 4.72);
       expect(offer.dropoffLongitude, -74.08);
       expect(offer.estimatedDurationMinutes, 17);
+      // Ruta real sobre calles decodificada (2 puntos Bogotá).
+      expect(offer.encodedPolyline, 'wbw[rebcMfrJnrM');
+      expect(offer.routePoints, hasLength(2));
       expect(offer.hasMapPosition, isTrue);
     });
 

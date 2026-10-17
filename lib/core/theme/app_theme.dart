@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
 
 /// Tema Material 3 — verde tinta + ámbar, tipografía Manrope local.
+///
+/// Tokens de diseño con lenguaje "ride moderno": tarjetas de alto contraste,
+/// radios generosos, sombras suaves y botones de acción grandes y limpios.
 abstract final class AppTheme {
   static const Color seed = Color(0xFF0B3D2E);
   static const Color accent = Color(0xFFF5A623);
-  static const Color lightSurface = Color(0xFFF7F8F6);
+  static const Color lightSurface = Color(0xFFF5F6F4);
   static const Color darkSurface = Color(0xFF101412);
   static const String fontFamily = 'Manrope';
+
+  /// Radios de los elementos principales.
+  static const double radiusCard = 20;
+  static const double radiusButton = 16;
+  static const double radiusInput = 14;
+  static const double radiusSheet = 24;
+
+  /// Altura mínima de botones de acción primarios.
+  static const double buttonHeight = 56;
+  static const double buttonHeightLarge = 60;
 
   static ThemeData get light => _buildTheme(Brightness.light);
 
@@ -38,9 +51,8 @@ abstract final class AppTheme {
       outline: isDark ? const Color(0xFF5C6B64) : baseScheme.outline,
       outlineVariant:
           isDark ? const Color(0xFF3D4844) : baseScheme.outlineVariant,
-      errorContainer: isDark
-          ? const Color(0xFF4A1F1F)
-          : baseScheme.errorContainer,
+      errorContainer:
+          isDark ? const Color(0xFF4A1F1F) : baseScheme.errorContainer,
       onErrorContainer:
           isDark ? const Color(0xFFFFDAD6) : baseScheme.onErrorContainer,
     );
@@ -100,11 +112,17 @@ abstract final class AppTheme {
       ),
     );
 
-    final cardColor =
-        isDark ? colorScheme.surfaceContainerLow : Colors.white;
+    final cardColor = isDark ? colorScheme.surfaceContainerLow : Colors.white;
     final fieldFillColor =
         isDark ? colorScheme.surfaceContainerHighest : Colors.white;
     final navBarColor = isDark ? colorScheme.surfaceContainer : Colors.white;
+
+    final cardShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(radiusCard),
+      side: BorderSide(
+        color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+      ),
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -118,6 +136,7 @@ abstract final class AppTheme {
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: false,
+        scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
@@ -126,41 +145,42 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: cardColor,
-        elevation: isDark ? 0 : 1,
+        elevation: isDark ? 0 : 2,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.55),
-          ),
-        ),
+        shadowColor: Colors.black.withValues(alpha: isDark ? 0 : 0.10),
+        shape: cardShape,
         margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(buttonHeight),
           foregroundColor: isDark ? Colors.white : null,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(radiusButton),
           ),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
             fontWeight: FontWeight.w700,
+            fontSize: 16,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(buttonHeight),
           foregroundColor: colorScheme.onSurface,
           backgroundColor: isDark ? colorScheme.surfaceContainerHighest : null,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(radiusButton),
           ),
           side: BorderSide(color: colorScheme.outline),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
             fontWeight: FontWeight.w600,
+            fontSize: 16,
           ),
         ),
       ),
@@ -181,22 +201,22 @@ abstract final class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radiusInput),
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radiusInput),
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radiusInput),
           borderSide: BorderSide(
             color: isDark ? accent : colorScheme.primary,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radiusInput),
           borderSide: BorderSide(color: colorScheme.error),
         ),
       ),
@@ -271,8 +291,11 @@ abstract final class AppTheme {
         backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
+        // Sombra suave tipo sheet elevado de apps de ride.
+        shadowColor: Colors.black.withValues(alpha: isDark ? 0 : 0.14),
+        elevation: isDark ? 0 : 8,
       ),
       listTileTheme: ListTileThemeData(
         iconColor: colorScheme.onSurfaceVariant,

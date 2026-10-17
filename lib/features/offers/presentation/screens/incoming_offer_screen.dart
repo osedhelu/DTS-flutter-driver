@@ -7,6 +7,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/di/providers.dart';
 import '../../../../core/notifications/offer_ringtone_service.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/polyline_decoder.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../domain/entities/driver_offer.dart';
 
@@ -29,6 +31,7 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
   int _remaining = _seconds;
   bool _busy = false;
   final _ringtone = OfferRingtoneService();
+  GoogleMapController? _mapController;
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
   @override
   void dispose() {
     unawaited(_ringtone.dispose());
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -100,6 +104,18 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
     Navigator.of(context).pop(false);
   }
 
+  Future<void> _fitRouteToCamera(List<LatLng> routePoints) async {
+    final controller = _mapController;
+    final bounds = boundsOf(routePoints);
+    if (controller == null || bounds == null) return;
+    // Espera el primer layout para que `animateCamera` tenga el tamaño real.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 90),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final offer = widget.offer;
@@ -139,6 +155,21 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
         ),
     };
 
+    // Ruta real sobre calles de la oferta de viaje (si el backend la calculó).
+    final routePoints = isRide && offer.routePoints.length >= 2
+        ? offer.routePoints
+        : const <LatLng>[];
+    final route = routePoints.isEmpty
+        ? const <Polyline>{}
+        : <Polyline>{
+            Polyline(
+              polylineId: const PolylineId('offer_route'),
+              points: routePoints,
+              color: theme.colorScheme.primary,
+              width: 5,
+            ),
+          };
+
     final progress = _remaining / _seconds;
 
     return Scaffold(
@@ -147,12 +178,30 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  Text(
-                    isRide ? 'Nuevo viaje' : 'Nueva oferta',
-                    style: theme.textTheme.titleLarge,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isRide ? 'Nuevo viaje' : 'Nueva oferta',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isRide
+                            ? 'Viaje #${offer.orderId}'
+                            : offer.storeName.isEmpty
+                                ? 'Pedido #${offer.orderId}'
+                                : offer.storeName,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                   const Spacer(),
                   DtsStatusChip(
@@ -165,7 +214,7 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 6,
@@ -174,38 +223,36 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                   child: GoogleMap(
                     initialCameraPosition: CameraPosition(
                       target: targetPos ?? const LatLng(4.711, -74.072),
                       zoom: 14,
                     ),
                     markers: markers,
+                    polylines: route,
                     myLocationEnabled: true,
                     zoomControlsEnabled: false,
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      if (routePoints.length >= 2) {
+                        _fitRouteToCamera(routePoints);
+                      }
+                    },
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        isRide
-                            ? 'Viaje #${offer.orderId}'
-                            : offer.storeName.isEmpty
-                                ? 'Pedido #${offer.orderId}'
-                                : offer.storeName,
-                        style: theme.textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
                       if (isRide) ...[
                         _OfferRouteLine(
                           icon: Icons.trip_origin,
@@ -214,7 +261,7 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
                               ? 'Recogida sin dirección'
                               : offer.pickupAddress,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         _OfferRouteLine(
                           icon: Icons.place_outlined,
                           color: Colors.green,
@@ -223,15 +270,18 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
                               : offer.dropoffAddress,
                         ),
                         if (offer.estimatedDurationMinutes != null) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 10),
                           Text(
                             '~ ${offer.estimatedDurationMinutes} min estimados',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 14),
+                        const Divider(height: 1),
+                        const SizedBox(height: 14),
                       ],
                       Row(
                         children: [
@@ -240,15 +290,28 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
                           const SizedBox(width: 6),
                           Text(
                             '${offer.distanceKm.toStringAsFixed(1)} km',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const Spacer(),
-                          Text(
-                            '\$${offer.total}',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: theme.colorScheme.primary,
+                            style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
+                          ),
+                          const Spacer(),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Pago estimado',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Text(
+                                '\$${offer.total}',
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -262,9 +325,10 @@ class _IncomingOfferScreenState extends ConsumerState<IncomingOfferScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: OutlinedButton.icon(
                       onPressed: _busy ? null : () => _reject(),
-                      child: const Text('Rechazar'),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Rechazar'),
                     ),
                   ),
                   const SizedBox(width: 12),

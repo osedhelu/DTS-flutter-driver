@@ -6,3 +6,4 @@ export 'dts_network_banner.dart';
 export 'dts_primary_button.dart';
 export 'dts_section_header.dart';
 export 'dts_status_chip.dart';
+export 'dts_status_dot.dart';

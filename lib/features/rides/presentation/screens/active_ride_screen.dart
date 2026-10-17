@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/di/providers.dart';
 import '../../../../core/location/geolocator_service.dart';
+import '../../../../core/utils/polyline_decoder.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../../location/infrastructure/background/background_tracking_service.dart';
 import '../../domain/entities/ride.dart';
@@ -33,6 +35,8 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   Ride? _ride;
   double? _lat;
   double? _lng;
+  BitmapDescriptor? _vehicleIcon;
+  GoogleMapController? _mapController;
   bool _loading = true;
   String? _error;
   bool _updating = false;
@@ -47,26 +51,54 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
   @override
   void dispose() {
     _gpsSub?.cancel();
+    _mapController?.dispose();
     super.dispose();
   }
 
   Future<void> _bootstrap() async {
     try {
       final ride = await ref.read(getRideUseCaseProvider).call(widget.rideId);
-      final geo = ref.read(geolocatorServiceProvider);
-      final granted =
-          await geo.isPermissionGranted() || await geo.requestPermission();
-      if (granted) {
-        final pos = await geo.getCurrentPosition();
-        _lat = pos.latitude;
-        _lng = pos.longitude;
-        _gpsSub = geo.getPositionStream().listen((position) {
-          if (!mounted) return;
-          setState(() {
-            _lat = position.latitude;
-            _lng = position.longitude;
+      // Genera el icono de vehículo sin bloquear la carga del viaje
+      // (best-effort: si la rasterización falla, se usa el pin por defecto).
+      unawaited(_loadVehicleIcon());
+      final trackingActive =
+          RideStatusValues.liveTrackingStatuses.contains(ride.status);
+      if (trackingActive) {
+        final geo = ref.read(geolocatorServiceProvider);
+        final granted =
+            await geo.isPermissionGranted() || await geo.requestPermission();
+        if (granted) {
+          final pos = await geo.getCurrentPosition();
+          _lat = pos.latitude;
+          _lng = pos.longitude;
+          await _sendTrackingPoint(
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+          );
+          _gpsSub = geo.getPositionStream().listen((position) {
+            if (!mounted) return;
+            setState(() {
+              _lat = position.latitude;
+              _lng = position.longitude;
+            });
+            // Envía la posición por WS/REST para que el cliente vea el
+            // movimiento del conductor en tiempo real.
+            unawaited(
+              _sendTrackingPoint(
+                latitude: position.latitude,
+                longitude: position.longitude,
+              ),
+            );
+            // Sigue al conductor suavizando el movimiento de la cámara.
+            unawaited(
+              _mapController?.animateCamera(
+                CameraUpdate.newLatLng(
+                  LatLng(position.latitude, position.longitude),
+                ),
+              ),
+            );
           });
-        });
+        }
       }
       ref.read(locationServiceProvider).start(isOnline: true);
       unawaited(
@@ -89,6 +121,123 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
         _loading = false;
       });
     }
+  }
+
+  /// Envía la posición actual del conductor al backend (WS con fallback REST).
+  Future<void> _sendTrackingPoint({
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      await ref.read(locationTrackingRepositoryProvider).sendTrackingPoint(
+            orderId: widget.rideId,
+            latitude: latitude,
+            longitude: longitude,
+          );
+    } catch (_) {
+      // Errores puntuales de red: el background tracking reintenta.
+    }
+  }
+
+  /// Genera el icono de vehículo sin bloquear el bootstrap y actualiza el
+  /// marcador cuando está listo (best-effort en entornos/plataformas donde la
+  /// rasterización de imagen no está disponible, p. ej. tests de widgets).
+  Future<void> _loadVehicleIcon() async {
+    final icon = await _buildVehicleMarkerIcon();
+    if (!mounted || icon == null) return;
+    setState(() => _vehicleIcon = icon);
+  }
+
+  /// Pinta un marcador circular con el icono de vehículo (bits PNG).
+  Future<BitmapDescriptor?> _buildVehicleMarkerIcon() async {
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      const size = 48.0;
+      const center = Offset(size / 2, size / 2);
+      canvas.drawCircle(
+        center,
+        size / 2,
+        Paint()..color = const Color(0xFF0B3D2E),
+      );
+      canvas.drawCircle(
+        center,
+        size / 2 - 2,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+      const iconSize = size * 0.62;
+      final painter = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(Icons.directions_car.codePoint),
+          style: TextStyle(
+            fontSize: iconSize,
+            fontFamily: Icons.directions_car.fontFamily,
+            color: Colors.white,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(
+        canvas,
+        Offset(
+          (size - painter.width) / 2,
+          (size - painter.height) / 2,
+        ),
+      );
+      final image =
+          await recorder.endRecording().toImage(size.toInt(), size.toInt());
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) return null;
+      return BitmapDescriptor.bytes(
+        bytes.buffer.asUint8List(),
+        width: size,
+        height: size,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Resuelve la dirección a mostrar para un punto del viaje.
+  ///
+  /// Cuando el cliente usa "mi ubicación actual" o toca el mapa, el backend
+  /// entrega textos genéricos ("Mi ubicación actual", "Punto en el mapa").
+  /// En esos casos (o si la dirección está vacía), se muestra como fallback
+  /// las coordenadas formateadas; si tampoco hay coordenadas, "Sin dirección".
+  String _displayAddress({
+    required String address,
+    double? latitude,
+    double? longitude,
+  }) {
+    final trimmed = address.trim().toLowerCase();
+    const generic = {
+      '',
+      'mi ubicación actual',
+      'mi ubicacion actual',
+      'punto en el mapa',
+      'sin dirección',
+      'sin direccion',
+    };
+    if (generic.contains(trimmed) && latitude != null && longitude != null) {
+      return '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}';
+    }
+    return address.trim().isEmpty ? 'Sin dirección' : address.trim();
+  }
+
+  /// Encuadra la cámara sobre la ruta real del viaje (si el backend la calculó).
+  Future<void> _fitRouteToCamera() async {
+    final controller = _mapController;
+    final routePoints = _ride?.routePoints ?? const <LatLng>[];
+    if (controller == null || routePoints.length < 2) return;
+    final bounds = boundsOf(routePoints);
+    if (bounds == null) return;
+    // Espera el primer layout para que `animateCamera` tenga el tamaño real.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 90));
+    });
   }
 
   Future<void> _finishRideTracking() async {
@@ -201,7 +350,8 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
         markerId: const MarkerId('me'),
         position: me,
         infoWindow: const InfoWindow(title: 'Tú'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        icon: _vehicleIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
       ),
       if (pickup != null)
         Marker(
@@ -222,11 +372,48 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
     };
 
     final polylines = <Polyline>{};
-    if (pickup != null && dropoff != null) {
+    final status = ride?.status;
+    // Ruta real sobre calles (Pickup → Dropoff) calculada por el backend.
+    // Cuando existe, se pinta siguiendo la malla vial en lugar de las líneas
+    // rectas punto a punto (antes: [me, pickup] y [pickup, dropoff]).
+    final realRoute = (ride?.routePoints.length ?? 0) >= 2
+        ? ride!.routePoints
+        : const <LatLng>[];
+    // Etapa del viaje:
+    // - Antes de recoger: el conductor va al punto de recogida.
+    // - Viaje en curso: la ruta es Recogida → Destino final.
+    final headingToPickup = status == RideStatusValues.driverAccepted ||
+        status == RideStatusValues.driverEnRouteToPickup ||
+        status == RideStatusValues.driverAtPickup;
+
+    if (realRoute.isNotEmpty) {
+      // Con geometría real se evitan las líneas rectas: se pinta la ruta del
+      // trayecto sobre calles en cualquier etapa activa.
       polylines.add(
         Polyline(
           polylineId: const PolylineId('ride_route'),
-          points: [if (_lat != null) me, pickup, dropoff],
+          points: realRoute,
+          color: theme.colorScheme.primary,
+          width: 5,
+        ),
+      );
+    } else if (headingToPickup && pickup != null) {
+      // Fallback sin proveedor de rutas (p. ej. CI): conductor → Recogida.
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('ride_to_pickup'),
+          points: [me, pickup],
+          color: theme.colorScheme.primary,
+          width: 4,
+        ),
+      );
+    } else if (status == RideStatusValues.rideInProgress &&
+        pickup != null &&
+        dropoff != null) {
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('ride_route'),
+          points: [pickup, dropoff],
           color: theme.colorScheme.primary,
           width: 4,
         ),
@@ -253,37 +440,53 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                   children: [
                     if (ride != null)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                         child: Row(
                           children: [
                             DtsStatusChip(
-                              label: ride.status,
+                              label: RideStatusValues.label(ride.status),
                               tone: DtsStatusChip.toneForStatus(ride.status),
                             ),
                             const Spacer(),
                             if (ride.estimatedDurationMinutes != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.primaryContainer,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: Text(
-                                  '~ ${ride.estimatedDurationMinutes} min',
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: theme.colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.schedule,
+                                      size: 16,
+                                      color:
+                                          theme.colorScheme.onPrimaryContainer,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '~ ${ride.estimatedDurationMinutes} min',
+                                      style:
+                                          theme.textTheme.labelMedium?.copyWith(
+                                        color: theme
+                                            .colorScheme.onPrimaryContainer,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 8),
                             ],
                             Text(
                               '\$${ride.total}',
-                              style: theme.textTheme.titleSmall?.copyWith(
+                              style: theme.textTheme.titleLarge?.copyWith(
                                 color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
@@ -293,6 +496,10 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                       child: GoogleMap(
                         initialCameraPosition:
                             CameraPosition(target: me, zoom: 13.5),
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                          _fitRouteToCamera();
+                        },
                         myLocationEnabled: true,
                         myLocationButtonEnabled: true,
                         markers: markers,
@@ -300,38 +507,77 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                       ),
                     ),
                     Material(
-                      elevation: 8,
+                      color: theme.colorScheme.surface,
+                      elevation: 12,
+                      shadowColor: Colors.black.withValues(alpha: 0.14),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
+                      clipBehavior: Clip.antiAlias,
                       child: SafeArea(
                         top: false,
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                                child: Container(
+                                  width: 44,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.outlineVariant,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
                               _RideRouteTile(
                                 icon: Icons.trip_origin,
                                 color: theme.colorScheme.primary,
                                 label: 'Recogida',
-                                address: ride?.pickupAddress ?? '',
+                                address: _displayAddress(
+                                  address: ride?.pickupAddress ?? '',
+                                  latitude: ride?.pickupLatitude,
+                                  longitude: ride?.pickupLongitude,
+                                ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 12),
                               _RideRouteTile(
                                 icon: Icons.place_outlined,
                                 color: Colors.green,
                                 label: 'Destino',
-                                address: ride?.dropoffAddress ?? '',
+                                address: _displayAddress(
+                                  address: ride?.dropoffAddress ?? '',
+                                  latitude: ride?.dropoffLatitude,
+                                  longitude: ride?.dropoffLongitude,
+                                ),
                               ),
                               if (ride?.estimatedDistanceKm != null) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${ride!.estimatedDistanceKm!.toStringAsFixed(1)} km estimados',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.route_outlined,
+                                      size: 16,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${ride!.estimatedDistanceKm!.toStringAsFixed(1)} km estimados',
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 16),
                               Row(
                                 children: [
                                   if (navTarget != null)
@@ -346,9 +592,9 @@ class _ActiveRideScreenState extends ConsumerState<ActiveRideScreen> {
                                     ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 12),
                               if (_updating)
-                                const LinearProgressIndicator()
+                                const LinearProgressIndicator(minHeight: 4)
                               else if (ride?.status ==
                                   RideStatusValues.driverAccepted)
                                 DtsPrimaryButton(
@@ -415,16 +661,34 @@ class _RideRouteTile extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: 8),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, size: 20, color: color),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: theme.textTheme.labelSmall),
+              Text(
+                label.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: 2),
               Text(
                 address.isEmpty ? 'Sin dirección' : address,
-                style: theme.textTheme.bodyMedium,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

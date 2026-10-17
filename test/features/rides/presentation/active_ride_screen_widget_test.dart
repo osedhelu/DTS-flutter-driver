@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:dts_driver/core/di/providers.dart';
 import 'package:dts_driver/core/location/geolocator_service.dart';
 import 'package:dts_driver/core/notifications/local_notification_service.dart';
 import 'package:dts_driver/features/location/application/services/location_service.dart';
+import 'package:dts_driver/features/location/domain/usecases/send_location_usecase.dart';
 import 'package:dts_driver/features/profile/domain/usecases/get_driver_profile_usecase.dart';
 import 'package:dts_driver/features/rides/domain/entities/ride.dart';
 import 'package:dts_driver/features/rides/domain/usecases/get_ride_usecase.dart';
@@ -30,9 +34,12 @@ class MockLocalNotificationService extends Mock
 class MockGetDriverProfileUseCase extends Mock
     implements GetDriverProfileUseCase {}
 
+class MockLocationTrackingRepository extends Mock
+    implements LocationTrackingRepository {}
+
 const _rideId = 8;
 
-Ride rideWith(String status) => Ride(
+Ride rideWith(String status, {String? encodedPolyline}) => Ride(
       id: _rideId,
       status: status,
       customerId: 7,
@@ -44,6 +51,7 @@ Ride rideWith(String status) => Ride(
       dropoffLongitude: -74.08,
       total: '18.50',
       estimatedDurationMinutes: 15,
+      encodedPolyline: encodedPolyline,
     );
 
 void main() {
@@ -53,6 +61,7 @@ void main() {
   late MockLocationService locationService;
   late MockLocalNotificationService localNotificationService;
   late MockGetDriverProfileUseCase getDriverProfileUseCase;
+  late MockLocationTrackingRepository trackingRepository;
 
   setUp(() {
     getRideUseCase = MockGetRideUseCase();
@@ -61,6 +70,7 @@ void main() {
     locationService = MockLocationService();
     localNotificationService = MockLocalNotificationService();
     getDriverProfileUseCase = MockGetDriverProfileUseCase();
+    trackingRepository = MockLocationTrackingRepository();
 
     when(() => geolocatorService.isPermissionGranted())
         .thenAnswer((_) async => true);
@@ -75,6 +85,11 @@ void main() {
         .thenAnswer((_) async {});
     when(() => localNotificationService.cancelTracking())
         .thenAnswer((_) async {});
+    when(() => trackingRepository.sendTrackingPoint(
+          orderId: any(named: 'orderId'),
+          latitude: any(named: 'latitude'),
+          longitude: any(named: 'longitude'),
+        )).thenAnswer((_) async {});
   });
 
   /// Actualiza el estado simulado según el status pedido.
@@ -92,10 +107,16 @@ void main() {
     WidgetTester tester, {
     required String status,
     GoRouter? router,
+    Stream<GeoPosition>? positionStream,
+    String? encodedPolyline,
   }) async {
-    when(() => getRideUseCase.call(_rideId))
-        .thenAnswer((_) async => rideWith(status));
+    when(() => getRideUseCase.call(_rideId)).thenAnswer(
+        (_) async => rideWith(status, encodedPolyline: encodedPolyline));
     stubUpdateStatus();
+    if (positionStream != null) {
+      when(() => geolocatorService.getPositionStream())
+          .thenAnswer((_) => positionStream);
+    }
 
     final overrides = [
       getRideUseCaseProvider.overrideWithValue(getRideUseCase),
@@ -107,6 +128,7 @@ void main() {
           .overrideWithValue(localNotificationService),
       getDriverProfileUseCaseProvider
           .overrideWithValue(getDriverProfileUseCase),
+      locationTrackingRepositoryProvider.overrideWithValue(trackingRepository),
     ];
 
     if (router != null) {
@@ -230,5 +252,70 @@ void main() {
           status: RideStatusValues.rideCompleted,
         )).called(1);
     expect(find.text('Pedidos screen'), findsOneWidget);
+  });
+
+  testWidgets(
+      'envía ubicación en tiempo real desde el stream GPS del conductor',
+      (tester) async {
+    final gps = StreamController<GeoPosition>();
+    addTearDown(gps.close);
+
+    // Pump con un stream controlado: bootstrap envía el punto inicial.
+    await pumpRide(
+      tester,
+      status: RideStatusValues.driverAccepted,
+      positionStream: gps.stream,
+    );
+
+    verify(() => trackingRepository.sendTrackingPoint(
+          orderId: _rideId,
+          latitude: 4.71,
+          longitude: -74.07,
+        )).called(1);
+
+    // El chip muestra la etiqueta legible, no el código técnico.
+    expect(find.text('Aceptado'), findsOneWidget);
+    expect(find.text(RideStatusValues.driverAccepted), findsNothing);
+
+    // Nuevo punto GPS → se envía al backend para que el cliente lo vea.
+    gps.add(const GeoPosition(latitude: 4.7200, longitude: -74.0800));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    verify(() => trackingRepository.sendTrackingPoint(
+          orderId: _rideId,
+          latitude: 4.72,
+          longitude: -74.08,
+        )).called(1);
+  });
+
+  testWidgets(
+      'pinta la ruta real sobre calles (decodificada) cuando hay encoded_polyline',
+      (tester) async {
+    // Polyline de 3 puntos del backend para Bogotá: Pickup → intermedio →
+    // Dropoff (generada con el codec de Google del backend).
+    const encoded = 'wbw[rebcMv`EznBnpDrbJ';
+    await pumpRide(
+      tester,
+      status: RideStatusValues.rideInProgress,
+      encodedPolyline: encoded,
+    );
+
+    final map = tester.widget<GoogleMap>(find.byType(GoogleMap));
+
+    // La ruta real decodificada reemplaza la línea recta de 2 puntos.
+    final route = map.polylines.firstWhere(
+      (p) => p.polylineId.value == 'ride_route',
+      orElse: () => throw StateError('ride_route no está en el mapa'),
+    );
+    expect(route.points, hasLength(3));
+    expect(route.points.first.latitude, closeTo(4.711, 1e-5));
+    expect(route.points[1].latitude, closeTo(4.680, 1e-5));
+    expect(route.points.first.longitude, closeTo(-74.0721, 1e-5));
+    // No debe existir la polyline recta me→pickup ni pickup→dropoff.
+    expect(
+      map.polylines.any((p) => p.polylineId.value == 'ride_to_pickup'),
+      isFalse,
+    );
   });
 }

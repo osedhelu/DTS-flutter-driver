@@ -51,6 +51,7 @@ class DriverOfferDto {
     this.dropoffLatitude,
     this.dropoffLongitude,
     this.estimatedDurationMinutes,
+    this.encodedPolyline,
   });
 
   factory DriverOfferDto.fromJson(Map<String, dynamic> json) {
@@ -76,6 +77,7 @@ class DriverOfferDto {
       dropoffLongitude: (json['dropoff_longitude'] as num?)?.toDouble(),
       estimatedDurationMinutes:
           (json['estimated_duration_minutes'] as num?)?.toInt(),
+      encodedPolyline: json['encoded_polyline'] as String?,
     );
   }
 
@@ -95,6 +97,7 @@ class DriverOfferDto {
   final double? dropoffLatitude;
   final double? dropoffLongitude;
   final int? estimatedDurationMinutes;
+  final String? encodedPolyline;
 
   DriverOffer toEntity() {
     return DriverOffer(
@@ -114,6 +117,7 @@ class DriverOfferDto {
       dropoffLatitude: dropoffLatitude,
       dropoffLongitude: dropoffLongitude,
       estimatedDurationMinutes: estimatedDurationMinutes,
+      encodedPolyline: encodedPolyline,
     );
   }
 }
