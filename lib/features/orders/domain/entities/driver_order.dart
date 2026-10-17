@@ -20,10 +20,11 @@ class DriverOrderItem extends Equatable {
 class DriverOrder extends Equatable {
   const DriverOrder({
     required this.id,
-    required this.storeId,
     required this.status,
     required this.total,
     required this.itemCount,
+    this.storeId,
+    this.orderType = 'delivery',
     this.storeName = '',
     this.storeLatitude,
     this.storeLongitude,
@@ -35,10 +36,18 @@ class DriverOrder extends Equatable {
     this.customerNotes = '',
     this.driverEarning = '',
     this.items = const [],
+    this.pickupAddress = '',
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.dropoffAddress = '',
+    this.dropoffLatitude,
+    this.dropoffLongitude,
+    this.estimatedDurationMinutes,
   });
 
   final int id;
-  final int storeId;
+  final int? storeId;
+  final String orderType;
   final String status;
   final String total;
   final int itemCount;
@@ -54,17 +63,38 @@ class DriverOrder extends Equatable {
   final String driverEarning;
   final List<DriverOrderItem> items;
 
+  // Campos de viaje (solo cuando orderType == 'ride').
+  final String pickupAddress;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final String dropoffAddress;
+  final double? dropoffLatitude;
+  final double? dropoffLongitude;
+  final int? estimatedDurationMinutes;
+
+  bool get isRide => orderType == 'ride';
+
+  bool get isDelivery => !isRide;
+
   bool get isActive =>
       status == 'driver_assigned' ||
       status == 'picked_up' ||
-      status == 'on_the_way';
+      status == 'on_the_way' ||
+      status == 'driver_accepted' ||
+      status == 'driver_en_route_to_pickup' ||
+      status == 'driver_at_pickup' ||
+      status == 'ride_in_progress';
 
-  bool get isCompleted => status == 'delivered' || status == 'cancelled';
+  bool get isCompleted =>
+      status == 'delivered' ||
+      status == 'cancelled' ||
+      status == 'ride_completed';
 
   @override
   List<Object?> get props => [
         id,
         storeId,
+        orderType,
         status,
         total,
         itemCount,
@@ -75,5 +105,12 @@ class DriverOrder extends Equatable {
         deliveryLatitude,
         deliveryLongitude,
         driverEarning,
+        pickupAddress,
+        pickupLatitude,
+        pickupLongitude,
+        dropoffAddress,
+        dropoffLatitude,
+        dropoffLongitude,
+        estimatedDurationMinutes,
       ];
 }

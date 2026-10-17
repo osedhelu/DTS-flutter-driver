@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/di/providers.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../orders/domain/entities/driver_order.dart';
 import '../../domain/entities/driver_earnings.dart';
 
 class EarningsScreen extends ConsumerStatefulWidget {
@@ -15,6 +16,7 @@ class EarningsScreen extends ConsumerStatefulWidget {
 class _EarningsScreenState extends ConsumerState<EarningsScreen> {
   String _period = 'today';
   DriverEarnings? _data;
+  List<DriverOrder> _completedRides = [];
   bool _loading = true;
   String? _error;
 
@@ -30,13 +32,18 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
       _error = null;
     });
     try {
-      final data =
-          await ref.read(earningsRemoteDataSourceProvider).getEarnings(
-                period: _period,
-              );
+      final results = await Future.wait([
+        ref.read(earningsRemoteDataSourceProvider).getEarnings(
+              period: _period,
+            ),
+        ref.read(driverOrderRepositoryProvider).listOrders(),
+      ]);
       if (!mounted) return;
       setState(() {
-        _data = data;
+        _data = results[0] as DriverEarnings;
+        _completedRides = (results[1] as List<DriverOrder>)
+            .where((o) => o.isRide && o.status == 'ride_completed')
+            .toList();
         _loading = false;
       });
     } catch (_) {
@@ -98,7 +105,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                       ),
                                     ),
                                     Text(
-                                      '${_data?.deliveryCount ?? 0} entregas · ${_data?.currency ?? 'COP'}',
+                                      '${_data?.deliveryCount ?? 0} entregas · ${_completedRides.length} viajes · ${_data?.currency ?? 'COP'}',
                                       style: theme.textTheme.bodySmall,
                                     ),
                                   ],
@@ -106,7 +113,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            const DtsSectionHeader(title: 'Detalle'),
+                            const DtsSectionHeader(title: 'Entregas'),
                             if (_data?.breakdown.isEmpty ?? true)
                               const DtsEmptyState(
                                 icon: Icons.payments_outlined,
@@ -122,8 +129,44 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen> {
                                     subtitle: Text(item.completedAt),
                                     trailing: Text(
                                       '\$${item.earning}',
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 16),
+                            const DtsSectionHeader(
+                              title: 'Viajes de movilidad',
+                              subtitle: 'Completados recientemente',
+                            ),
+                            if (_completedRides.isEmpty)
+                              const DtsEmptyState(
+                                icon: Icons.directions_car_outlined,
+                                message:
+                                    'Aún no hay viajes completados. Acepta un viaje para empezar.',
+                              )
+                            else
+                              ..._completedRides.map(
+                                (ride) => Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  child: ListTile(
+                                    leading: const Icon(
+                                      Icons.directions_car_outlined,
+                                    ),
+                                    title: Text('Viaje #${ride.id}'),
+                                    subtitle: Text(
+                                      '${ride.pickupAddress.isEmpty ? 'Recogida' : ride.pickupAddress} → '
+                                      '${ride.dropoffAddress.isEmpty ? 'Destino' : ride.dropoffAddress}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    trailing: Text(
+                                      '\$${ride.total}',
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),

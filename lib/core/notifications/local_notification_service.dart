@@ -56,9 +56,34 @@ class LocalNotificationService {
           playSound: true,
         ),
       );
+      await _ensureTrackingChannel(androidPlugin);
     }
 
     _ready = true;
+  }
+
+  /// Crea (si no existe) el canal `dts_tracking` usado por el FGS del tracking
+  /// de ubicación. `flutter_background_service` no crea canales custom por sí
+  /// mismo: si falta, `startForeground()` lanza
+  /// `CannotPostForegroundServiceNotificationException` en Android 13+.
+  Future<void> ensureTrackingChannel() async {
+    if (!_isAndroid) return;
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await _ensureTrackingChannel(androidPlugin);
+  }
+
+  Future<void> _ensureTrackingChannel(
+      AndroidFlutterLocalNotificationsPlugin? androidPlugin) async {
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'dts_tracking',
+        'Ubicación en entrega',
+        description:
+            'Notificación del seguimiento de ubicación en segundo plano',
+        importance: Importance.low,
+      ),
+    );
   }
 
   Future<void> showOffer({

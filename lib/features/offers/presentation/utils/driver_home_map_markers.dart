@@ -3,6 +3,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../stores/domain/entities/store.dart';
 import '../../domain/entities/driver_offer.dart';
 
+/// Marcadores del home del conductor.
+///
+/// Diferenciados por tipo de oferta:
+/// - Ofertas delivery → marcador rojo en la tienda.
+/// - Ofertas ride → marcador azul en el punto de recogida del pasajero.
 Set<Marker> buildDriverHomeMapMarkers({
   required double? driverLat,
   required double? driverLng,
@@ -12,7 +17,10 @@ Set<Marker> buildDriverHomeMapMarkers({
   required void Function(Store store) onStoreTap,
   required void Function(DriverOffer offer) onOfferTap,
 }) {
-  final offerStoreIds = offers.map((o) => o.storeId).toSet();
+  final offerStoreIds = offers
+      .where((o) => o.isDelivery && o.storeId != null)
+      .map((o) => o.storeId!)
+      .toSet();
 
   return {
     if (driverLat != null && driverLng != null)
@@ -42,16 +50,35 @@ Set<Marker> buildDriverHomeMapMarkers({
         ),
       ),
     ...offers.map(
-      (o) => Marker(
-        markerId: MarkerId('offer_${o.orderId}'),
-        position: LatLng(o.storeLatitude, o.storeLongitude),
-        infoWindow: InfoWindow(
-          title: o.storeName.isEmpty ? 'Pedido #${o.orderId}' : o.storeName,
-          snippet: '${o.distanceKm.toStringAsFixed(1)} km',
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        onTap: () => onOfferTap(o),
-      ),
-    ),
+      (o) {
+        final position = o.isRide
+            ? (o.hasMapPosition
+                ? LatLng(o.pickupLatitude!, o.pickupLongitude!)
+                : null)
+            : (o.storeLatitude != null && o.storeLongitude != null
+                ? LatLng(o.storeLatitude!, o.storeLongitude!)
+                : null);
+        if (position == null) return null;
+
+        final title = o.isRide
+            ? 'Viaje #${o.orderId}'
+            : o.storeName.isEmpty
+                ? 'Pedido #${o.orderId}'
+                : o.storeName;
+        final snippet = o.isRide
+            ? '${o.distanceKm.toStringAsFixed(1)} km · Recogida'
+            : '${o.distanceKm.toStringAsFixed(1)} km';
+
+        return Marker(
+          markerId: MarkerId('offer_${o.orderId}'),
+          position: position,
+          infoWindow: InfoWindow(title: title, snippet: snippet),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            o.isRide ? BitmapDescriptor.hueAzure : BitmapDescriptor.hueRed,
+          ),
+          onTap: () => onOfferTap(o),
+        );
+      },
+    ).whereType<Marker>(),
   };
 }

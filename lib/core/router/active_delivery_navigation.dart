@@ -10,3 +10,11 @@ void navigateToActiveDelivery(GoRouter router, int orderId) {
   if (location == target) return;
   router.go(target);
 }
+
+/// Navega al viaje activo (pasajero) reemplazando la ruta (`go`).
+void navigateToActiveRide(GoRouter router, int rideId) {
+  final target = '/active-ride/$rideId';
+  final location = router.routerDelegate.currentConfiguration.uri.path;
+  if (location == target) return;
+  router.go(target);
+}

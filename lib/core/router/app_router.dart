@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/history/presentation/screens/history_screen.dart';
 import '../../features/navigation/presentation/screens/active_delivery_screen.dart';
+import '../../features/rides/presentation/screens/active_ride_screen.dart';
 import '../../features/orders/presentation/screens/driver_order_detail_screen.dart';
 import '../../features/orders/presentation/screens/order_chat_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
@@ -51,9 +52,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authStateProvider);
       final onboard = ref.read(onboardingGateProvider);
       final loc = state.matchedLocation;
-      final isPublic = loc == '/login' ||
-          loc == '/register' ||
-          loc == '/forgot-password';
+      final isPublic =
+          loc == '/login' || loc == '/register' || loc == '/forgot-password';
       final isOnboarding = loc == '/onboarding';
 
       return auth.when(
@@ -165,6 +165,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
           return ActiveDeliveryScreen(orderId: id);
+        },
+      ),
+      GoRoute(
+        path: '/active-ride/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return ActiveRideScreen(rideId: id);
         },
       ),
       GoRoute(

@@ -38,8 +38,9 @@ class _DriverOrderDetailScreenState
     });
 
     try {
-      final order =
-          await ref.read(driverOrderRepositoryProvider).getOrder(widget.orderId);
+      final order = await ref
+          .read(driverOrderRepositoryProvider)
+          .getOrder(widget.orderId);
       if (!mounted) return;
       setState(() {
         _order = order;
@@ -102,32 +103,60 @@ class _DriverOrderDetailScreenState
                         const Spacer(),
                         if (order.isActive)
                           TextButton(
-                            onPressed: () => navigateToActiveDelivery(
-                              GoRouter.of(context),
-                              order.id,
-                            ),
+                            onPressed: () {
+                              if (order.isRide) {
+                                navigateToActiveRide(
+                                  GoRouter.of(context),
+                                  order.id,
+                                );
+                              } else {
+                                navigateToActiveDelivery(
+                                  GoRouter.of(context),
+                                  order.id,
+                                );
+                              }
+                            },
                             child: const Text('Abrir mapa'),
                           ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      order.storeName.isNotEmpty
-                          ? order.storeName
-                          : 'Comercio #${order.storeId}',
+                      order.isRide
+                          ? 'Viaje #${order.id}'
+                          : order.storeName.isNotEmpty
+                              ? order.storeName
+                              : 'Comercio #${order.storeId ?? ''}',
                       style: theme.textTheme.headlineSmall,
                     ),
                     Text('Total: \$${order.total}'),
-                    if (order.driverEarning.isNotEmpty)
+                    if (order.isDelivery && order.driverEarning.isNotEmpty)
                       Text(
                         'Tu ganancia: \$${order.driverEarning}',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: theme.colorScheme.primary,
                         ),
                       ),
-                    if (order.deliveryAddress.isNotEmpty) ...[
+                    if (order.isDelivery &&
+                        order.deliveryAddress.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text('Entrega: ${order.deliveryAddress}'),
+                    ],
+                    if (order.isRide) ...[
+                      if (order.pickupAddress.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text('Recogida: ${order.pickupAddress}'),
+                      ],
+                      if (order.dropoffAddress.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text('Destino: ${order.dropoffAddress}'),
+                      ],
+                      if (order.estimatedDurationMinutes != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '~ ${order.estimatedDurationMinutes} min estimados',
+                        ),
+                      ],
                     ],
                     if (order.customerNotes.isNotEmpty)
                       Text('Notas: ${order.customerNotes}'),

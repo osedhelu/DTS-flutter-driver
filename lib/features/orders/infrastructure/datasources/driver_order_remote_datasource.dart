@@ -49,10 +49,11 @@ class DriverOrderRemoteDataSource {
 class DriverOrderDto {
   const DriverOrderDto({
     required this.id,
-    required this.storeId,
     required this.status,
     required this.total,
     required this.itemCount,
+    this.storeId,
+    this.orderType = 'delivery',
     this.storeName = '',
     this.storeLatitude,
     this.storeLongitude,
@@ -64,13 +65,21 @@ class DriverOrderDto {
     this.customerNotes = '',
     this.driverEarning = '',
     this.items = const [],
+    this.pickupAddress = '',
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.dropoffAddress = '',
+    this.dropoffLatitude,
+    this.dropoffLongitude,
+    this.estimatedDurationMinutes,
   });
 
   factory DriverOrderDto.fromJson(Map<String, dynamic> json) {
     final itemsJson = json['items'] as List<dynamic>? ?? [];
     return DriverOrderDto(
       id: json['id'] as int,
-      storeId: json['store_id'] as int,
+      storeId: (json['store_id'] as num?)?.toInt(),
+      orderType: json['order_type'] as String? ?? 'delivery',
       status: json['status'] as String,
       total: '${json['total']}',
       itemCount: json['item_count'] as int? ?? 0,
@@ -99,11 +108,20 @@ class DriverOrderDto {
             ),
           )
           .toList(),
+      pickupAddress: (json['pickup_address'] as String?) ?? '',
+      pickupLatitude: (json['pickup_latitude'] as num?)?.toDouble(),
+      pickupLongitude: (json['pickup_longitude'] as num?)?.toDouble(),
+      dropoffAddress: (json['dropoff_address'] as String?) ?? '',
+      dropoffLatitude: (json['dropoff_latitude'] as num?)?.toDouble(),
+      dropoffLongitude: (json['dropoff_longitude'] as num?)?.toDouble(),
+      estimatedDurationMinutes:
+          (json['estimated_duration_minutes'] as num?)?.toInt(),
     );
   }
 
   final int id;
-  final int storeId;
+  final int? storeId;
+  final String orderType;
   final String status;
   final String total;
   final int itemCount;
@@ -118,11 +136,19 @@ class DriverOrderDto {
   final String customerNotes;
   final String driverEarning;
   final List<DriverOrderItem> items;
+  final String pickupAddress;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final String dropoffAddress;
+  final double? dropoffLatitude;
+  final double? dropoffLongitude;
+  final int? estimatedDurationMinutes;
 
   DriverOrder toEntity() {
     return DriverOrder(
       id: id,
       storeId: storeId,
+      orderType: orderType,
       status: status,
       total: total,
       itemCount: itemCount,
@@ -137,6 +163,13 @@ class DriverOrderDto {
       customerNotes: customerNotes,
       driverEarning: driverEarning,
       items: items,
+      pickupAddress: pickupAddress,
+      pickupLatitude: pickupLatitude,
+      pickupLongitude: pickupLongitude,
+      dropoffAddress: dropoffAddress,
+      dropoffLatitude: dropoffLatitude,
+      dropoffLongitude: dropoffLongitude,
+      estimatedDurationMinutes: estimatedDurationMinutes,
     );
   }
 }

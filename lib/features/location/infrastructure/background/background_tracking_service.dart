@@ -20,6 +20,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/config/env.dart';
+import '../../../../core/notifications/local_notification_service.dart';
 import '../datasources/location_tracking_remote_datasource.dart';
 
 const _activeOrderKey = 'bg_active_order_id';
@@ -27,6 +28,10 @@ const _accessTokenKey = 'access_token';
 
 /// Registra el worker de segundo plano. Llamar una vez en `main()`.
 Future<void> configureBackgroundTracking() async {
+  // Android: el canal del FGS debe existir antes de la primera notificación;
+  // el plugin no lo crea solo cuando se usa un channel id custom.
+  await LocalNotificationService().ensureTrackingChannel();
+
   await FlutterBackgroundService().configure(
     androidConfiguration: AndroidConfiguration(
       onStart: _backgroundTrackingOnStart,

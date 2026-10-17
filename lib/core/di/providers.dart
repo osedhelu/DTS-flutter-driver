@@ -44,6 +44,12 @@ import '../../features/offers/domain/usecases/list_driver_offers_usecase.dart';
 import '../../features/offers/domain/usecases/reject_driver_offer_usecase.dart';
 import '../../features/offers/infrastructure/datasources/driver_offer_remote_datasource.dart';
 import '../../features/offers/infrastructure/repositories/driver_offer_repository_impl.dart';
+import '../../features/rides/domain/repositories/ride_repository.dart';
+import '../../features/rides/domain/usecases/accept_ride_offer_usecase.dart';
+import '../../features/rides/domain/usecases/get_ride_usecase.dart';
+import '../../features/rides/domain/usecases/update_ride_status_usecase.dart';
+import '../../features/rides/infrastructure/datasources/ride_remote_datasource.dart';
+import '../../features/rides/infrastructure/repositories/ride_repository_impl.dart';
 import '../../features/earnings/infrastructure/datasources/earnings_remote_datasource.dart';
 import '../../features/stores/domain/repositories/stores_repository.dart';
 import '../../features/stores/domain/usecases/get_stores_usecase.dart';
@@ -274,3 +280,24 @@ final getStoresUseCaseProvider = Provider<GetStoresUseCase>((ref) {
 });
 
 final connectivityOfflineProvider = StateProvider<bool>((ref) => false);
+
+final rideRemoteDataSourceProvider = Provider<RideRemoteDataSource>((ref) {
+  return RideRemoteDataSource(ref.watch(apiClientProvider).dio);
+});
+
+final rideRepositoryProvider = Provider<RideRepository>((ref) {
+  return RideRepositoryImpl(ref.watch(rideRemoteDataSourceProvider));
+});
+
+final getRideUseCaseProvider = Provider<GetRideUseCase>((ref) {
+  return GetRideUseCase(ref.watch(rideRepositoryProvider));
+});
+
+final acceptRideOfferUseCaseProvider = Provider<AcceptRideOfferUseCase>((ref) {
+  return AcceptRideOfferUseCase(ref.watch(rideRepositoryProvider));
+});
+
+final updateRideStatusUseCaseProvider =
+    Provider<UpdateRideStatusUseCase>((ref) {
+  return UpdateRideStatusUseCase(ref.watch(rideRepositoryProvider));
+});

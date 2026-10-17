@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/providers.dart';
 import '../../../../core/router/active_delivery_navigation.dart';
 import '../../domain/entities/driver_offer.dart';
+import 'driver_home_map_screen.dart';
 
 class OffersScreen extends ConsumerStatefulWidget {
   const OffersScreen({super.key});
@@ -20,6 +21,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
   int? _actionOrderId;
   bool _isOnline = false;
   bool _toggling = false;
+  OfferFilter _filter = OfferFilter.all;
 
   @override
   void initState() {
@@ -92,12 +94,26 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
   Future<void> _accept(DriverOffer offer) async {
     setState(() => _actionOrderId = offer.orderId);
     try {
-      await ref.read(acceptDriverOfferUseCaseProvider).call(offer.orderId);
+      if (offer.isRide) {
+        await ref.read(acceptRideOfferUseCaseProvider).call(offer.orderId);
+      } else {
+        await ref.read(acceptDriverOfferUseCaseProvider).call(offer.orderId);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Pedido #${offer.orderId} aceptado')),
+        SnackBar(
+          content: Text(
+            offer.isRide
+                ? 'Viaje #${offer.orderId} aceptado'
+                : 'Pedido #${offer.orderId} aceptado',
+          ),
+        ),
       );
-      navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
+      if (offer.isRide) {
+        navigateToActiveRide(GoRouter.of(context), offer.orderId);
+      } else {
+        navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -151,6 +167,32 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
             value: _isOnline,
             onChanged: _toggling ? null : _toggleOnline,
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: SegmentedButton<OfferFilter>(
+              key: const Key('offer_filter'),
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              segments: const [
+                ButtonSegment(
+                  value: OfferFilter.all,
+                  label: Text('Todas'),
+                ),
+                ButtonSegment(
+                  value: OfferFilter.delivery,
+                  label: Text('Delivery'),
+                ),
+                ButtonSegment(
+                  value: OfferFilter.ride,
+                  label: Text('Viajes'),
+                ),
+              ],
+              selected: {_filter},
+              onSelectionChanged: (selection) {
+                setState(() => _filter = selection.first);
+              },
+            ),
+          ),
           const Divider(height: 1),
           Expanded(
             child: RefreshIndicator(
@@ -176,16 +218,34 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
     if (_offers.isEmpty) {
       return _buildEmptyState(
         icon: Icons.local_shipping_outlined,
-        message: 'Sin ofertas por ahora.\nMantente en línea para recibir pedidos.',
+        message:
+            'Sin ofertas por ahora.\nMantente en línea para recibir pedidos.',
+      );
+    }
+
+    final filteredOffers = _offers
+        .where((o) => switch (_filter) {
+              OfferFilter.all => true,
+              OfferFilter.delivery => o.isDelivery,
+              OfferFilter.ride => o.isRide,
+            })
+        .toList();
+
+    if (filteredOffers.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.filter_alt_off_outlined,
+        message: _filter == OfferFilter.ride
+            ? 'No hay viajes disponibles con el filtro actual.'
+            : 'No hay pedidos disponibles con el filtro actual.',
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _offers.length,
+      itemCount: filteredOffers.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final offer = _offers[index];
+        final offer = filteredOffers[index];
         return _OfferCard(
           key: Key('offer_card_${offer.orderId}'),
           offer: offer,
@@ -220,7 +280,8 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                       message,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                     ),
                   ],
@@ -251,6 +312,7 @@ class _OfferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isRide = offer.isRide;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -262,7 +324,7 @@ class _OfferCard extends StatelessWidget {
                 CircleAvatar(
                   backgroundColor: theme.colorScheme.secondaryContainer,
                   child: Icon(
-                    Icons.storefront,
+                    isRide ? Icons.directions_car_outlined : Icons.storefront,
                     color: theme.colorScheme.onSecondaryContainer,
                   ),
                 ),
@@ -272,9 +334,11 @@ class _OfferCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        offer.storeName.isEmpty
-                            ? 'Pedido #${offer.orderId}'
-                            : offer.storeName,
+                        isRide
+                            ? 'Viaje #${offer.orderId}'
+                            : offer.storeName.isEmpty
+                                ? 'Pedido #${offer.orderId}'
+                                : offer.storeName,
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -290,6 +354,28 @@ class _OfferCard extends StatelessWidget {
                 Chip(label: Text(offer.status)),
               ],
             ),
+            if (isRide) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${offer.pickupAddress.isEmpty ? 'Recogida' : offer.pickupAddress}'
+                ' → '
+                '${offer.dropoffAddress.isEmpty ? 'Destino' : offer.dropoffAddress}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (offer.estimatedDurationMinutes != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '~ ${offer.estimatedDurationMinutes} min estimados',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
             const SizedBox(height: 16),
             if (isLoading)
               const Padding(
@@ -311,7 +397,7 @@ class _OfferCard extends StatelessWidget {
                     child: FilledButton(
                       key: Key('offer_accept_${offer.orderId}'),
                       onPressed: onAccept,
-                      child: const Text('Aceptar'),
+                      child: Text(isRide ? 'Aceptar viaje' : 'Aceptar'),
                     ),
                   ),
                 ],

@@ -91,13 +91,22 @@ class _DriverOrdersScreenState extends ConsumerState<DriverOrdersScreen> {
                             return Card(
                               key: Key('order_tile_${order.id}'),
                               child: ListTile(
+                                leading: Icon(
+                                  order.isRide
+                                      ? Icons.directions_car_outlined
+                                      : Icons.shopping_bag_outlined,
+                                ),
                                 title: Text(
-                                  order.storeName.isNotEmpty
-                                      ? order.storeName
-                                      : 'Pedido #${order.id}',
+                                  order.isRide
+                                      ? 'Viaje #${order.id}'
+                                      : order.storeName.isNotEmpty
+                                          ? order.storeName
+                                          : 'Pedido #${order.id}',
                                 ),
                                 subtitle: Text(
-                                  '${order.status} · \$${order.total} · ${order.itemCount} ítems',
+                                  order.isRide
+                                      ? '${order.status} · \$${order.total}'
+                                      : '${order.status} · \$${order.total} · ${order.itemCount} ítems',
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -113,10 +122,17 @@ class _DriverOrdersScreenState extends ConsumerState<DriverOrdersScreen> {
                                 ),
                                 onTap: () {
                                   if (order.isActive) {
-                                    navigateToActiveDelivery(
-                                      GoRouter.of(context),
-                                      order.id,
-                                    );
+                                    if (order.isRide) {
+                                      navigateToActiveRide(
+                                        GoRouter.of(context),
+                                        order.id,
+                                      );
+                                    } else {
+                                      navigateToActiveDelivery(
+                                        GoRouter.of(context),
+                                        order.id,
+                                      );
+                                    }
                                   } else {
                                     context.go('/orders/${order.id}');
                                   }

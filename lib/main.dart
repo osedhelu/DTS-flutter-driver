@@ -176,6 +176,9 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
     if (orderId != null && type == 'driver_assigned') {
       navigateToActiveDelivery(router, orderId);
     }
+    if (orderId != null && type == 'driver_accepted') {
+      navigateToActiveRide(router, orderId);
+    }
   }
 
   Future<void> _routeFromData(Map<String, dynamic> data) async {
@@ -189,6 +192,10 @@ class _DtsDriverAppState extends ConsumerState<DtsDriverApp> {
     }
     if (type == 'driver_assigned') {
       navigateToActiveDelivery(ref.read(appRouterProvider), orderId);
+      return;
+    }
+    if (type == 'driver_accepted') {
+      navigateToActiveRide(ref.read(appRouterProvider), orderId);
       return;
     }
     if (NewOrderNotificationHandler.readyTypes.contains(type)) {

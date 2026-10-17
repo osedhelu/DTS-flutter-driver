@@ -26,6 +26,9 @@ class DriverHomeMapScreen extends ConsumerStatefulWidget {
       _DriverHomeMapScreenState();
 }
 
+/// Filtro del feed unificado por tipo de oferta.
+enum OfferFilter { all, delivery, ride }
+
 class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
     with WidgetsBindingObserver {
   List<DriverOffer> _offers = [];
@@ -44,6 +47,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
   double? _workCenterLng;
   double _workRadiusKm = defaultRadiusKm;
   int? _actionOrderId;
+  OfferFilter _filter = OfferFilter.all;
   GoogleMapController? _mapController;
   Timer? _offersPoll;
 
@@ -223,7 +227,11 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
     );
     if (!mounted) return;
     if (accepted == true) {
-      navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
+      if (offer.isRide) {
+        navigateToActiveRide(GoRouter.of(context), offer.orderId);
+      } else {
+        navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
+      }
     }
     await Future.wait([_loadOffers(), _loadActiveOrders()]);
   }
@@ -231,13 +239,25 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
   Future<void> _accept(DriverOffer offer) async {
     setState(() => _actionOrderId = offer.orderId);
     try {
-      await ref.read(acceptDriverOfferUseCaseProvider).call(offer.orderId);
+      if (offer.isRide) {
+        await ref.read(acceptRideOfferUseCaseProvider).call(offer.orderId);
+      } else {
+        await ref.read(acceptDriverOfferUseCaseProvider).call(offer.orderId);
+      }
       if (!mounted) return;
-      navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
+      if (offer.isRide) {
+        navigateToActiveRide(GoRouter.of(context), offer.orderId);
+      } else {
+        navigateToActiveDelivery(GoRouter.of(context), offer.orderId);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo aceptar la oferta')),
+        SnackBar(
+          content: Text(offer.isRide
+              ? 'No se pudo aceptar el viaje'
+              : 'No se pudo aceptar la oferta'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _actionOrderId = null);
@@ -274,11 +294,19 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
         ? LatLng(_lat!, _lng!)
         : const LatLng(4.711, -74.072);
 
+    final filteredOffers = _offers
+        .where((o) => switch (_filter) {
+              OfferFilter.all => true,
+              OfferFilter.delivery => o.isDelivery,
+              OfferFilter.ride => o.isRide,
+            })
+        .toList();
+
     final markers = buildDriverHomeMapMarkers(
       driverLat: _lat,
       driverLng: _lng,
       stores: _stores,
-      offers: _offers,
+      offers: filteredOffers,
       showStores: _showStores,
       onStoreTap: _showStoreSheet,
       onOfferTap: _openOffer,
@@ -472,7 +500,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                       child: DtsSectionHeader(
                         title: 'Ofertas',
                         subtitle: _isOnline
-                            ? '${_offers.length} disponibles'
+                            ? '${filteredOffers.length} disponibles'
                             : 'Ponte en línea',
                         trailing: IconButton(
                           icon: const Icon(Icons.refresh),
@@ -485,6 +513,34 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                                   ]);
                                 },
                         ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      child: SegmentedButton<OfferFilter>(
+                        key: const Key('offer_filter'),
+                        showSelectedIcon: false,
+                        style: const ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        segments: const [
+                          ButtonSegment(
+                            value: OfferFilter.all,
+                            label: Text('Todas'),
+                          ),
+                          ButtonSegment(
+                            value: OfferFilter.delivery,
+                            label: Text('Delivery'),
+                          ),
+                          ButtonSegment(
+                            value: OfferFilter.ride,
+                            label: Text('Viajes'),
+                          ),
+                        ],
+                        selected: {_filter},
+                        onSelectionChanged: (selection) {
+                          setState(() => _filter = selection.first);
+                        },
                       ),
                     ),
                     Expanded(
@@ -531,6 +587,14 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
       );
     }
 
+    final filteredOffers = _offers
+        .where((o) => switch (_filter) {
+              OfferFilter.all => true,
+              OfferFilter.delivery => o.isDelivery,
+              OfferFilter.ride => o.isRide,
+            })
+        .toList();
+
     final children = <Widget>[];
 
     if (_activeOrders.isNotEmpty) {
@@ -547,16 +611,29 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Card(
               child: ListTile(
-                leading: const Icon(Icons.local_shipping_outlined),
-                title: Text('Pedido #${order.id}'),
+                leading: Icon(
+                  order.isRide
+                      ? Icons.directions_car_outlined
+                      : Icons.local_shipping_outlined,
+                ),
+                title: Text(
+                  order.isRide ? 'Viaje #${order.id}' : 'Pedido #${order.id}',
+                ),
                 subtitle: Text(
-                  order.storeName.isNotEmpty
-                      ? order.storeName
-                      : 'Tienda #${order.storeId}',
+                  order.isRide
+                      ? '${order.status} · \$${order.total}'
+                      : order.storeName.isNotEmpty
+                          ? order.storeName
+                          : 'Tienda #${order.storeId ?? ''}',
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () =>
-                    navigateToActiveDelivery(GoRouter.of(context), order.id),
+                onTap: () {
+                  if (order.isRide) {
+                    navigateToActiveRide(GoRouter.of(context), order.id);
+                  } else {
+                    navigateToActiveDelivery(GoRouter.of(context), order.id);
+                  }
+                },
               ),
             ),
           ),
@@ -565,7 +642,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
       ]);
     }
 
-    if (_offers.isEmpty) {
+    if (filteredOffers.isEmpty) {
       children.add(
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -575,7 +652,14 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
             message: _isOnline
                 ? _gpsDenied
                     ? 'Activa el permiso de ubicación para ver pedidos cercanos.'
-                    : 'Aparecen cuando el comercio busca conductor. Revisa Mis pedidos.'
+                    : switch (_filter) {
+                        OfferFilter.delivery =>
+                          'No hay pedidos de tiendas cercanos por ahora.',
+                        OfferFilter.ride =>
+                          'No hay viajes de pasajeros cercanos por ahora.',
+                        OfferFilter.all =>
+                          'Aparecen cuando el comercio busca conductor. Revisa Mis pedidos.',
+                      }
                 : 'Activa el interruptor para empezar a recibir pedidos.',
           ),
         ),
@@ -588,12 +672,12 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
     }
 
     children.addAll(
-      _offers.asMap().entries.map(
-        (entry) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: _buildOfferCard(entry.value),
-        ),
-      ),
+      filteredOffers.asMap().entries.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: _buildOfferCard(entry.value),
+            ),
+          ),
     );
 
     return ListView(
@@ -620,7 +704,11 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                   CircleAvatar(
                     backgroundColor:
                         Theme.of(context).colorScheme.secondaryContainer,
-                    child: const Icon(Icons.storefront),
+                    child: Icon(
+                      offer.isRide
+                          ? Icons.directions_car_outlined
+                          : Icons.storefront,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -628,9 +716,11 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          offer.storeName.isEmpty
-                              ? 'Pedido #${offer.orderId}'
-                              : offer.storeName,
+                          offer.isRide
+                              ? 'Viaje #${offer.orderId}'
+                              : offer.storeName.isEmpty
+                                  ? 'Pedido #${offer.orderId}'
+                                  : offer.storeName,
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
@@ -648,6 +738,14 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                   ),
                 ],
               ),
+              if (offer.isRide) ...[
+                const SizedBox(height: 12),
+                _RideOfferRoute(
+                  pickupAddress: offer.pickupAddress,
+                  dropoffAddress: offer.dropoffAddress,
+                  estimatedDurationMinutes: offer.estimatedDurationMinutes,
+                ),
+              ],
               const SizedBox(height: 12),
               if (busy)
                 const LinearProgressIndicator()
@@ -666,7 +764,7 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
                       child: FilledButton(
                         key: Key('offer_accept_${offer.orderId}'),
                         onPressed: () => _accept(offer),
-                        child: const Text('Aceptar'),
+                        child: Text(offer.isRide ? 'Aceptar viaje' : 'Aceptar'),
                       ),
                     ),
                   ],
@@ -675,6 +773,91 @@ class _DriverHomeMapScreenState extends ConsumerState<DriverHomeMapScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Detalle de ruta dentro de una tarjeta de oferta de viaje.
+class _RideOfferRoute extends StatelessWidget {
+  const _RideOfferRoute({
+    required this.pickupAddress,
+    required this.dropoffAddress,
+    this.estimatedDurationMinutes,
+  });
+
+  final String pickupAddress;
+  final String dropoffAddress;
+  final int? estimatedDurationMinutes;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _RouteLine(
+            icon: Icons.trip_origin,
+            color: theme.colorScheme.primary,
+            text: pickupAddress.isEmpty
+                ? 'Recogida sin dirección'
+                : pickupAddress,
+          ),
+          const SizedBox(height: 6),
+          _RouteLine(
+            icon: Icons.place_outlined,
+            color: Colors.green,
+            text: dropoffAddress.isEmpty
+                ? 'Destino sin dirección'
+                : dropoffAddress,
+          ),
+          if (estimatedDurationMinutes != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '~ $estimatedDurationMinutes min estimados',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteLine extends StatelessWidget {
+  const _RouteLine({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ],
     );
   }
 }
